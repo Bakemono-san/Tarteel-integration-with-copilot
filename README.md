@@ -9,6 +9,22 @@ A modern, production-ready web application for practicing Quran recitation with 
 
 ---
 
+## 🚀 Quick Start
+
+### Development
+```bash
+./start.sh
+```
+
+### Production Deployment
+```bash
+./deploy.sh
+```
+
+📖 **[Complete Deployment Guide →](DEPLOYMENT.md)**
+
+---
+
 ## 🌟 Features
 
 ### 🎤 Advanced Speech Recognition

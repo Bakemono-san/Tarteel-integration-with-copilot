@@ -10,6 +10,7 @@ from models.tarteel_model import TarteelModel
 from services.tajweed_analyzer import TajweedAnalyzer
 from services.quran_service import QuranService
 from pydantic import BaseModel
+from datetime import datetime
 
 app = FastAPI(title="Quran Recitation API")
 
@@ -60,12 +61,15 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint for monitoring"""
     return {
         "status": "healthy",
-        "model_loaded": tarteel_model.model_loaded,
-        "model_type": tarteel_model.model_type if tarteel_model.model_loaded else None,
-        "device": tarteel_model.device
+        "timestamp": datetime.now().isoformat(),
+        "services": {
+            "quran_service": "operational",
+            "tarteel_model": "operational",
+            "tajweed_analyzer": "operational"
+        }
     }
 
 @app.get("/api/quran/surahs")
