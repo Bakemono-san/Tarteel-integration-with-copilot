@@ -7,5 +7,8 @@ chmod +x setup-ssl.sh
 chmod +x start.sh
 chmod +x clear-cache.sh
 chmod +x show-deployment-info.sh
+chmod +x vps-install.sh
+chmod +x vps-update.sh
+chmod +x vps-info.sh
 
 echo "✅ Tous les scripts sont maintenant exécutables"
