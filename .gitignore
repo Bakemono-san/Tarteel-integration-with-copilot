@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Node
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.production.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+.coverage
+.pytest_cache/
+coverage/
+
+# Models (optional - models are large)
+*.pt
+*.pth
+*.bin
+*.onnx
+
+# Audio files (optional)
+*.wav
+*.mp3
+*.ogg
+*.webm
+
+# Temporary files
+tmp/
+temp/
+*.tmp
