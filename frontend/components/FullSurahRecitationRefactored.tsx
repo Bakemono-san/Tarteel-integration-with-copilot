@@ -114,7 +114,7 @@ export default function FullSurahRecitation({
       try {
         setIsLoading(true);
         const res = await fetch(
-          `http://185.245.183.209:8081/api/quran/surah/${surahNumber}`,
+          `https://185.245.183.209:8081/api/quran/surah/${surahNumber}`,
         );
         if (!res.ok) throw new Error("Failed to fetch surah");
 

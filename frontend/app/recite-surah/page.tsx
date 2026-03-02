@@ -21,7 +21,9 @@ export default function ReciteSurahPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("http://185.245.183.209:8081/api/quran/surahs");
+        const res = await fetch(
+          "https://185.245.183.209:8081/api/quran/surahs",
+        );
         const data = await res.json();
         if (data.surahs) setSurahs(data.surahs);
       } catch (e) {
