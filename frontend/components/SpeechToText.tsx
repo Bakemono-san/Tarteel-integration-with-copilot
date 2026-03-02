@@ -77,7 +77,7 @@ export default function SpeechToText({
     if (!text.trim()) return;
     setIsProcessing(true);
     try {
-      const res = await fetch("http://localhost:8000/api/speech/add-tashkeel", {
+      const res = await fetch("http://185.245.183.209:8081/api/speech/add-tashkeel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, context: "quran" }),

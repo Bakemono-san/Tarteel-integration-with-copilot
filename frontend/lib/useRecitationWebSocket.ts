@@ -27,7 +27,7 @@ export function useRecitationWebSocket() {
 
   const connect = useCallback(() => {
     try {
-      const ws = new WebSocket("ws://localhost:8000/ws/recitation");
+      const ws = new WebSocket("ws://185.245.183.209:8081/ws/recitation");
 
       ws.onopen = () => {
         console.log("WebSocket connected");

@@ -18,7 +18,7 @@ export default function QuranAudioPlayer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const audioRef = useRef<HTMLAudioElement>(null);
-  const url = `http://localhost:8000/api/quran/audio/${surahNumber}/${ayahNumber}?reciter=${reciter}`;
+  const url = `http://185.245.183.209:8081/api/quran/audio/${surahNumber}/${ayahNumber}?reciter=${reciter}`;
 
   useEffect(() => {
     const a = audioRef.current;

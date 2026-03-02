@@ -70,7 +70,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
       try {
         setIsLoading(true);
         const res = await fetch(
-          `http://localhost:8000/api/quran/surah/${surahNumber}`,
+          `http://http:185.245.183.209:8081/api/quran/surah/${surahNumber}`,
         );
         if (!res.ok) throw new Error();
         const data = await res.json();
@@ -102,7 +102,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
         .join(" ")
         .replace(/\s+/g, " ");
       const res = await fetch(
-        "http://localhost:8000/api/quran/analyze-recitation",
+        "http://185.245.183.209:8081/api/quran/analyze-recitation",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
