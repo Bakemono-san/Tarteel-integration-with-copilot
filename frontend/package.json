@@ -21,12 +21,7 @@
     "postcss": "^8.4.33",
     "lucide-react": "^0.312.0",
     "clsx": "^2.1.0",
-    "class-variance-authority": "^0.7.0",
-    "@radix-ui/react-dialog": "^1.1.1",
-    "@radix-ui/react-slot": "^2.0.1",
-    "@radix-ui/react-progress": "^1.0.3",
-    "@radix-ui/react-separator": "^1.0.3",
-    "@radix-ui/react-tabs": "^1.0.4"
+    "class-variance-authority": "^0.7.0"
   },
   "devDependencies": {
     "eslint": "^8.56.0",
