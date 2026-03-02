@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Mic, MicOff, Copy, Check } from "lucide-react";
 
-interface SpeechToTextProps {
+interface Props {
   onTranscriptionComplete?: (text: string) => void;
   language?: string;
 }
@@ -11,239 +11,155 @@ interface SpeechToTextProps {
 export default function SpeechToText({
   onTranscriptionComplete,
   language = "ar-SA",
-}: SpeechToTextProps) {
+}: Props) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [transcriptWithTashkeel, setTranscriptWithTashkeel] = useState("");
+  const [withTashkeel, setWithTashkeel] = useState("");
   const [detectedAyahs, setDetectedAyahs] = useState<any[]>([]);
   const [isCopied, setIsCopied] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const recognitionRef = useRef<any>(null);
-  const processingTimeoutRef = useRef<any>(null);
+  const timerRef = useRef<any>(null);
 
   useEffect(() => {
-    // Check browser support
-    if (typeof window !== "undefined") {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition ||
-        (window as any).webkitSpeechRecognition;
-
-      if (!SpeechRecognition) {
-        setIsSupported(false);
-        return;
-      }
-
-      try {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = language;
-
-        recognition.onstart = () => {
-          setIsListening(true);
-        };
-
-        recognition.onresult = (event: any) => {
-          let interimTranscript = "";
-          let finalTranscript = "";
-
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-
-            if (event.results[i].isFinal) {
-              finalTranscript += transcript + " ";
-            } else {
-              interimTranscript += transcript;
-            }
-          }
-
-          setTranscript(finalTranscript + interimTranscript);
-        };
-
-        recognition.onerror = (event: any) => {
-          if (event.error !== "aborted" && event.error !== "no-speech") {
-            console.error("Speech recognition error:", event.error);
-          }
-        };
-
-        recognition.onend = () => {
-          setIsListening(false);
-          if (transcript && onTranscriptionComplete) {
-            onTranscriptionComplete(transcript);
-          }
-        };
-
-        recognitionRef.current = recognition;
-        setIsSupported(true);
-      } catch (error) {
-        console.error("Error initializing speech recognition:", error);
-        setIsSupported(false);
-      }
+    if (typeof window === "undefined") return;
+    const SR =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      setIsSupported(false);
+      return;
     }
-
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {
-          // Ignore errors on cleanup
+    try {
+      const r = new SR();
+      r.continuous = true;
+      r.interimResults = true;
+      r.lang = language;
+      r.onstart = () => setIsListening(true);
+      r.onresult = (e: any) => {
+        let f = "",
+          i = "";
+        for (let x = e.resultIndex; x < e.results.length; x++) {
+          const t = e.results[x][0].transcript;
+          e.results[x].isFinal ? (f += t + " ") : (i += t);
         }
-      }
+        setTranscript(f + i);
+      };
+      r.onerror = (e: any) => {
+        if (e.error !== "aborted" && e.error !== "no-speech")
+          console.error(e.error);
+      };
+      r.onend = () => {
+        setIsListening(false);
+        if (transcript && onTranscriptionComplete)
+          onTranscriptionComplete(transcript);
+      };
+      recognitionRef.current = r;
+    } catch {
+      setIsSupported(false);
+    }
+    return () => {
+      try {
+        recognitionRef.current?.stop();
+      } catch {}
     };
   }, [language]);
 
-  // Debounced tashkeel addition - only after user stops speaking
   useEffect(() => {
-    if (transcript && !isListening) {
-      // Clear previous timeout
-      if (processingTimeoutRef.current) {
-        clearTimeout(processingTimeoutRef.current);
-      }
-
-      // Add tashkeel after user stops speaking (500ms delay)
-      processingTimeoutRef.current = setTimeout(() => {
-        addTashkeelToText(transcript);
-      }, 500);
-    }
-
-    return () => {
-      if (processingTimeoutRef.current) {
-        clearTimeout(processingTimeoutRef.current);
-      }
-    };
+    if (!transcript || isListening) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => addTashkeel(transcript), 500);
+    return () => clearTimeout(timerRef.current);
   }, [transcript, isListening]);
 
-  // Function to add tashkeel via backend
-  const addTashkeelToText = async (text: string) => {
+  const addTashkeel = async (text: string) => {
     if (!text.trim()) return;
-
     setIsProcessing(true);
     try {
-      const response = await fetch(
-        "http://localhost:8000/api/speech/add-tashkeel",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            text: text,
-            context: "quran",
-          }),
-        },
-      );
-
-      const data = await response.json();
-
-      console.log("Tashkeel response:", data);
-
-      if (data.with_tashkeel) {
-        setTranscriptWithTashkeel(data.with_tashkeel);
-        if (data.detected_ayahs && data.detected_ayahs.length > 0) {
-          setDetectedAyahs(data.detected_ayahs);
-        }
-
-        // Log sequence info if available
-        if (data.sequence_info) {
-          console.log(
-            `✅ Detected ${data.sequence_info.total_ayahs} ayahs from Surah ${data.sequence_info.surah} (Ayahs ${data.sequence_info.start_ayah}-${data.sequence_info.end_ayah})`,
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Error adding tashkeel:", error);
+      const res = await fetch("http://localhost:8000/api/speech/add-tashkeel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, context: "quran" }),
+      });
+      const data = await res.json();
+      if (data.with_tashkeel) setWithTashkeel(data.with_tashkeel);
+      if (data.detected_ayahs?.length) setDetectedAyahs(data.detected_ayahs);
+    } catch {
+      /* silent */
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleStartListening = () => {
-    if (recognitionRef.current && !isListening) {
-      try {
-        recognitionRef.current.start();
-      } catch (error) {
-        console.error("Error starting recognition:", error);
-      }
-    }
+  const toggle = () => {
+    if (!recognitionRef.current) return;
+    try {
+      isListening
+        ? recognitionRef.current.stop()
+        : recognitionRef.current.start();
+    } catch {}
   };
 
-  const handleStopListening = () => {
-    if (recognitionRef.current && isListening) {
-      try {
-        recognitionRef.current.stop();
-      } catch (error) {
-        console.error("Error stopping recognition:", error);
-      }
-    }
-  };
-
-  const handleCopy = () => {
-    const textToCopy = transcriptWithTashkeel || transcript;
-    navigator.clipboard.writeText(textToCopy);
+  const copy = () => {
+    navigator.clipboard.writeText(withTashkeel || transcript);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleClear = () => {
+  const clear = () => {
     setTranscript("");
-    setTranscriptWithTashkeel("");
+    setWithTashkeel("");
     setDetectedAyahs([]);
   };
 
   if (!isSupported) {
     return (
-      <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-        <p className="text-sm text-yellow-800">
-          ⚠️ Speech-to-Text is not supported in your browser. Please use Chrome,
-          Firefox, or Edge.
-        </p>
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        ⚠️ Speech recognition not supported. Use Chrome or Edge.
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Recording Button */}
-      <div className="flex gap-3">
+      {/* Buttons */}
+      <div className="flex gap-2">
         <button
-          onClick={isListening ? handleStopListening : handleStartListening}
-          className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition ${
+          onClick={toggle}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition sm:py-3 ${
             isListening
-              ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
-              : "bg-emerald-600 hover:bg-emerald-700 text-white"
+              ? "bg-red-500 text-white animate-pulse"
+              : "bg-emerald-600 text-white hover:bg-emerald-700"
           }`}
         >
           {isListening ? (
             <>
-              <MicOff className="h-5 w-5" />
-              Stop Listening
+              <MicOff className="h-4 w-4" /> Stop
             </>
           ) : (
             <>
-              <Mic className="h-5 w-5" />
-              Start Speaking
+              <Mic className="h-4 w-4" /> Start Speaking
             </>
           )}
         </button>
-
         {transcript && (
           <>
             <button
-              onClick={handleCopy}
-              className="px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition"
-              title="Copy to clipboard"
+              onClick={copy}
+              className="rounded-lg bg-sky-600 px-3 text-white transition hover:bg-sky-700"
+              title="Copy"
             >
               {isCopied ? (
-                <Check className="h-5 w-5" />
+                <Check className="h-4 w-4" />
               ) : (
-                <Copy className="h-5 w-5" />
+                <Copy className="h-4 w-4" />
               )}
             </button>
             <button
-              onClick={handleClear}
-              className="px-4 py-3 rounded-lg bg-gray-400 hover:bg-gray-500 text-white transition"
-              title="Clear text"
+              onClick={clear}
+              className="rounded-lg bg-gray-200 px-3 text-gray-700 transition hover:bg-gray-300"
+              title="Clear"
             >
               ✕
             </button>
@@ -251,73 +167,61 @@ export default function SpeechToText({
         )}
       </div>
 
-      {/* Status */}
       {isListening && (
-        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-          <p className="text-sm text-blue-800">
-            🎤 Listening... Speak clearly in Arabic
-          </p>
+        <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800 sm:text-sm">
+          🎤 Listening… speak clearly in Arabic
         </div>
       )}
 
-      {/* Transcript Display */}
-      {transcript && (
-        <div className="space-y-4">
-          {/* Original transcript */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-300">
-            <p className="text-xs text-gray-500 mb-2">
-              Recognized Speech (sans tashkeel):
-            </p>
-            <p className="text-lg text-gray-700 leading-relaxed">
+      {transcript ? (
+        <div className="space-y-3">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4">
+            <p className="mb-1 text-xs text-gray-400">Recognised speech</p>
+            <p className="text-sm leading-relaxed text-gray-700 sm:text-base">
               {transcript}
             </p>
           </div>
 
-          {/* Processing indicator */}
           {isProcessing && (
-            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 text-center">
-              <p className="text-sm text-blue-800">
-                ⏳ Adding tashkeel and detecting ayahs...
-              </p>
-            </div>
+            <p className="text-center text-xs text-sky-600">
+              ⏳ Adding tashkeel…
+            </p>
           )}
 
-          {/* Transcript with tashkeel */}
-          {transcriptWithTashkeel && (
-            <div className="bg-white rounded-lg p-4 border-2 border-emerald-300">
-              <p className="text-xs text-emerald-600 font-semibold mb-2">
-                ✨ Avec Tashkeel:
+          {withTashkeel && (
+            <div className="rounded-lg border-2 border-emerald-200 bg-white p-3 sm:p-4">
+              <p className="mb-1 text-xs font-semibold text-emerald-600">
+                ✨ With tashkeel
               </p>
               <p
-                className="text-2xl text-gray-900 leading-relaxed arabic-text"
+                className="arabic-text !text-xl sm:!text-2xl text-gray-900"
                 dir="rtl"
               >
-                {transcriptWithTashkeel}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                {transcriptWithTashkeel.length} caractères
+                {withTashkeel}
               </p>
             </div>
           )}
 
-          {/* Detected Ayahs */}
           {detectedAyahs.length > 0 && (
-            <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-300">
-              <p className="text-sm font-semibold text-emerald-800 mb-3">
-                🕌 Ayahs détectées:
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 sm:p-4">
+              <p className="mb-2 text-xs font-semibold text-emerald-800">
+                🕌 Detected ayahs
               </p>
               <div className="space-y-2">
-                {detectedAyahs.map((ayah, index) => (
+                {detectedAyahs.map((a, i) => (
                   <div
-                    key={index}
-                    className="bg-white p-3 rounded border border-emerald-200"
+                    key={i}
+                    className="rounded-lg border border-emerald-100 bg-white p-2.5 sm:p-3"
                   >
-                    <p className="text-xs text-gray-600 mb-1">
-                      Surah {ayah.surah}, Ayah {ayah.ayah} (
-                      {Math.round(ayah.similarity * 100)}% match)
+                    <p className="text-xs text-gray-500">
+                      Surah {a.surah}, Ayah {a.ayah} —{" "}
+                      {Math.round(a.similarity * 100)}%
                     </p>
-                    <p className="text-sm text-gray-900 arabic-text" dir="rtl">
-                      {ayah.text}
+                    <p
+                      className="arabic-text !text-base text-gray-900 sm:!text-lg"
+                      dir="rtl"
+                    >
+                      {a.text}
                     </p>
                   </div>
                 ))}
@@ -325,15 +229,11 @@ export default function SpeechToText({
             </div>
           )}
         </div>
-      )}
-
-      {!transcript && !isListening && (
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 text-center">
-          <p className="text-sm text-gray-600">
-            👆 Click "Start Speaking" to begin recording
-          </p>
+      ) : !isListening ? (
+        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 text-center text-sm text-gray-400">
+          👆 Tap "Start Speaking" to begin
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

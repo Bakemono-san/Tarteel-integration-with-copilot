@@ -1,90 +1,66 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, BookOpen } from 'lucide-react'
-import SpeechToText from '@/components/SpeechToText'
+import Link from "next/link";
+import { ArrowLeft, BookOpen } from "lucide-react";
+import SpeechToText from "@/components/SpeechToText";
 
 export default function SpeechToTextPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
+    <main className="min-h-screen">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 text-gray-700 hover:text-gray-900">
-              <ArrowLeft className="h-5 w-5" />
-              <span>Back to Home</span>
-            </Link>
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-6 w-6 text-emerald-600" />
-              <h1 className="text-xl font-bold text-gray-900">Speech-to-Text Practice</h1>
-            </div>
+      <header className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 text-sm text-gray-600 transition hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Home</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-emerald-600" />
+            <h1 className="text-base font-bold sm:text-lg">Speech‑to‑Text</h1>
           </div>
+          <div className="w-10 sm:w-14" />
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          {/* Info Card */}
-          <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4 text-center">
-              🗣️ Speech-to-Text Practice
-            </h2>
-            <p className="text-gray-700 text-center leading-relaxed">
-              Practice speaking Arabic and convert your speech to text in real-time.
-              This tool helps you practice your pronunciation and see how the system recognizes your speech.
-            </p>
-          </div>
+      {/* Content */}
+      <div className="mx-auto max-w-2xl px-4 py-6 sm:py-10 space-y-5">
+        {/* Info */}
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-lg text-center sm:p-8">
+          <h2 className="mb-2 text-xl font-bold sm:text-2xl">
+            🗣️ Speech‑to‑Text Practice
+          </h2>
+          <p className="text-sm leading-relaxed text-gray-600 sm:text-base">
+            Speak Arabic and see your speech converted to text in real-time.
+            Great for pronunciation practice.
+          </p>
+        </div>
 
-          {/* Speech-to-Text Component */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <SpeechToText
-              language="ar-SA"
-              onTranscriptionComplete={(text) => {
-                console.log("Transcription:", text)
-              }}
-            />
-          </div>
+        {/* STT Component */}
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-lg sm:p-8">
+          <SpeechToText
+            language="ar-SA"
+            onTranscriptionComplete={(text) =>
+              console.log("Transcription:", text)
+            }
+          />
+        </div>
 
-          {/* Tips Section */}
-          <div className="bg-blue-50 rounded-2xl shadow p-6 mt-8 border border-blue-200">
-            <h3 className="text-lg font-semibold text-blue-900 mb-4">💡 Tips for Best Results:</h3>
-            <ul className="space-y-2 text-blue-800">
-              <li className="flex gap-2">
-                <span>✓</span>
-                <span>Speak clearly and slowly</span>
-              </li>
-              <li className="flex gap-2">
-                <span>✓</span>
-                <span>Use a quiet environment</span>
-              </li>
-              <li className="flex gap-2">
-                <span>✓</span>
-                <span>Speak in Arabic (al-Fusha or modern standard Arabic)</span>
-              </li>
-              <li className="flex gap-2">
-                <span>✓</span>
-                <span>Click "Start Speaking" to begin recording</span>
-              </li>
-              <li className="flex gap-2">
-                <span>✓</span>
-                <span>Click "Stop Listening" when finished</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Browser Support */}
-          <div className="bg-yellow-50 rounded-2xl shadow p-6 mt-8 border border-yellow-200">
-            <h3 className="text-lg font-semibold text-yellow-900 mb-2">🌐 Browser Support:</h3>
-            <p className="text-yellow-800">
-              Speech-to-Text works best in Chrome, Firefox, and Edge.
-              Safari has limited support. Please use an up-to-date browser.
-            </p>
-          </div>
+        {/* Tips */}
+        <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 sm:p-5">
+          <h3 className="mb-2 text-sm font-semibold text-sky-900 sm:text-base">
+            💡 Tips for best results
+          </h3>
+          <ul className="space-y-1 text-xs text-sky-800 sm:text-sm">
+            <li>✓ Speak clearly and at a moderate pace</li>
+            <li>✓ Use a quiet environment</li>
+            <li>✓ Speak in Modern Standard Arabic</li>
+            <li>✓ Works best in Chrome or Edge</li>
+          </ul>
         </div>
       </div>
     </main>
-  )
+  );
 }

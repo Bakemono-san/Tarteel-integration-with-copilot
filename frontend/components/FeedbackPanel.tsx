@@ -10,7 +10,6 @@ interface TajweedRule {
   description: string;
   level?: string;
 }
-
 interface Error {
   type: string;
   position: number;
@@ -18,7 +17,6 @@ interface Error {
   received: string;
   severity: string;
 }
-
 interface TajweedAnalysis {
   accuracy: number;
   errors: Error[];
@@ -27,138 +25,113 @@ interface TajweedAnalysis {
   score: number;
   corrections: string[];
 }
-
 interface Analysis {
   transcription: string;
   confidence: number;
   tajweed: TajweedAnalysis;
   expected: string;
 }
-
-interface FeedbackPanelProps {
+interface Props {
   analysis: Analysis | null;
   expectedText: string;
 }
 
-export default function FeedbackPanel({
-  analysis,
-  expectedText,
-}: FeedbackPanelProps) {
+export default function FeedbackPanel({ analysis }: Props) {
   if (!analysis) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl p-8 h-full">
-        <div className="flex flex-col items-center justify-center h-full text-center">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-            <Award className="h-12 w-12 text-gray-400" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Waiting for Recitation
-          </h3>
-          <p className="text-gray-600">
-            Click the microphone button to start recording your recitation.
-            You'll receive instant feedback here.
-          </p>
+      <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-lg lg:min-h-0 lg:h-full">
+        <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 sm:h-20 sm:w-20">
+          <Award className="h-8 w-8 text-gray-300 sm:h-10 sm:w-10" />
         </div>
+        <h3 className="text-base font-bold sm:text-lg">
+          Waiting for Recitation
+        </h3>
+        <p className="mt-1 max-w-xs text-xs text-gray-500 sm:text-sm">
+          Tap the microphone to start. Feedback will appear here.
+        </p>
       </div>
     );
   }
 
   const { tajweed } = analysis;
-  const score = tajweed?.score || 0;
-  const accuracy = tajweed?.accuracy || 0;
+  const score = tajweed?.score ?? 0;
+  const accuracy = tajweed?.accuracy ?? 0;
 
-  // Determine score color
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return "text-green-600";
-    if (score >= 75) return "text-yellow-600";
-    return "text-red-600";
-  };
-
-  const getScoreBgColor = (score: number) => {
-    if (score >= 90) return "bg-green-100";
-    if (score >= 75) return "bg-yellow-100";
-    return "bg-red-100";
-  };
+  const scoreBg =
+    score >= 90 ? "bg-emerald-50" : score >= 75 ? "bg-amber-50" : "bg-red-50";
+  const scoreText =
+    score >= 90
+      ? "text-emerald-600"
+      : score >= 75
+        ? "text-amber-600"
+        : "text-red-600";
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-8">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-        Analysis Results
-      </h3>
+    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-lg sm:p-8 space-y-5">
+      <h3 className="text-center text-lg font-bold sm:text-xl">Analysis</h3>
 
-      {/* Score Display */}
-      <div
-        className={`${getScoreBgColor(score)} rounded-xl p-6 mb-6 text-center`}
-      >
-        <div className={`text-6xl font-bold ${getScoreColor(score)} mb-2`}>
+      {/* Score */}
+      <div className={`rounded-xl p-5 text-center ${scoreBg}`}>
+        <div
+          className={`text-5xl font-extrabold score-pop sm:text-6xl ${scoreText}`}
+        >
           {score}
         </div>
-        <div className="text-lg font-semibold text-gray-700">Overall Score</div>
-        <div className="text-sm text-gray-600 mt-2">
-          Accuracy: {(accuracy * 100).toFixed(1)}%
-        </div>
+        <p className="mt-1 text-sm font-medium text-gray-600">Overall Score</p>
+        <p className="text-xs text-gray-500">
+          Accuracy {(accuracy * 100).toFixed(1)}%
+        </p>
       </div>
 
-      {/* Feedback Message */}
-      <div className="bg-blue-50 rounded-lg p-4 mb-6">
-        <div className="flex gap-2">
-          <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <p className="text-blue-900">
-            {tajweed?.feedback || "Keep practicing!"}
-          </p>
-        </div>
+      {/* Feedback */}
+      <div className="flex gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm">
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" />
+        <p className="text-sky-900">
+          {tajweed?.feedback || "Keep practising!"}
+        </p>
       </div>
 
-      {/* Errors Section */}
-      {tajweed?.errors && tajweed.errors.length > 0 && (
-        <div className="mb-6">
-          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <XCircle className="h-5 w-5 text-red-500" />
-            Errors Found ({tajweed.errors.length})
+      {/* Errors */}
+      {tajweed?.errors?.length > 0 && (
+        <div>
+          <h4 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700">
+            <XCircle className="h-4 w-4" /> Errors ({tajweed.errors.length})
           </h4>
           <div className="space-y-2">
-            {tajweed.errors.map((error, index) => (
+            {tajweed.errors.map((e, i) => (
               <div
-                key={index}
-                className={`p-3 rounded-lg ${
-                  error.severity === "high"
-                    ? "bg-red-50 border border-red-200"
-                    : "bg-yellow-50 border border-yellow-200"
-                }`}
+                key={i}
+                className={`rounded-lg border p-3 text-sm ${e.severity === "high" ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}
               >
-                <div className="text-sm">
-                  <span className="font-semibold capitalize">
-                    {error.type}:
-                  </span>{" "}
-                  {error.type === "substitution" && (
-                    <span>
-                      Expected{" "}
-                      <span className="arabic-text text-lg">
-                        {error.expected}
-                      </span>{" "}
-                      but got{" "}
-                      <span className="arabic-text text-lg">
-                        {error.received}
-                      </span>
+                <span className="font-semibold capitalize">{e.type}: </span>
+                {e.type === "substitution" && (
+                  <>
+                    Expected{" "}
+                    <span className="font-semibold" dir="rtl">
+                      {e.expected}
+                    </span>{" "}
+                    → got{" "}
+                    <span className="font-semibold" dir="rtl">
+                      {e.received}
                     </span>
-                  )}
-                  {error.type === "omission" && (
-                    <span>
-                      Missing{" "}
-                      <span className="arabic-text text-lg">
-                        {error.expected}
-                      </span>
+                  </>
+                )}
+                {e.type === "omission" && (
+                  <>
+                    Missing{" "}
+                    <span className="font-semibold" dir="rtl">
+                      {e.expected}
                     </span>
-                  )}
-                  {error.type === "insertion" && (
-                    <span>
-                      Extra{" "}
-                      <span className="arabic-text text-lg">
-                        {error.received}
-                      </span>
+                  </>
+                )}
+                {e.type === "insertion" && (
+                  <>
+                    Extra{" "}
+                    <span className="font-semibold" dir="rtl">
+                      {e.received}
                     </span>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -166,72 +139,50 @@ export default function FeedbackPanel({
       )}
 
       {/* Corrections */}
-      {tajweed?.corrections && tajweed.corrections.length > 0 && (
-        <div className="mb-6">
-          <h4 className="font-semibold text-gray-900 mb-3">💡 Suggestions</h4>
-          <ul className="space-y-2">
-            {tajweed.corrections.map((correction, index) => (
-              <li key={index} className="text-sm text-gray-700 flex gap-2">
+      {tajweed?.corrections?.length > 0 && (
+        <div>
+          <h4 className="mb-2 text-sm font-semibold">💡 Suggestions</h4>
+          <ul className="space-y-1 text-sm text-gray-700">
+            {tajweed.corrections.map((c, i) => (
+              <li key={i} className="flex gap-1.5">
                 <span className="text-emerald-500">•</span>
-                <span>{correction}</span>
+                {c}
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {/* Tajweed Rules Detected */}
-      {tajweed?.tajweed_rules && tajweed.tajweed_rules.length > 0 && (
+      {/* Tajweed rules */}
+      {tajweed?.tajweed_rules?.length > 0 && (
         <div>
-          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-emerald-500" />
-            Tajweed Rules Detected ({tajweed.tajweed_rules.length})
+          <h4 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+            <CheckCircle className="h-4 w-4" /> Tajweed Rules (
+            {tajweed.tajweed_rules.length})
           </h4>
           <div className="space-y-2">
-            {tajweed.tajweed_rules.map((rule, index) => {
-              // Determine color based on level
-              const levelColors = {
-                critical: "bg-red-50 border-red-200",
-                important: "bg-blue-50 border-blue-200",
-                default: "bg-emerald-50 border-emerald-200",
-              };
-              const textColors = {
-                critical: "text-red-900",
-                important: "text-blue-900",
-                default: "text-emerald-900",
-              };
-              const colorClass =
-                levelColors[rule.level as keyof typeof levelColors] ||
-                levelColors.default;
-              const textColor =
-                textColors[rule.level as keyof typeof textColors] ||
-                textColors.default;
-
+            {tajweed.tajweed_rules.map((r, i) => {
+              const bg =
+                r.level === "critical"
+                  ? "bg-red-50 border-red-200"
+                  : r.level === "important"
+                    ? "bg-sky-50 border-sky-200"
+                    : "bg-emerald-50 border-emerald-200";
               return (
-                <div
-                  key={index}
-                  className={`${colorClass} p-3 rounded-lg border`}
-                >
-                  <div
-                    className={`font-semibold ${textColor} mb-1 flex items-center gap-2 flex-wrap`}
-                  >
-                    {rule.level === "critical" && <span>⚠️</span>}
-                    {rule.level === "important" && <span>💡</span>}
-                    <span>{rule.rule}</span>
-                    {rule.letter && (
-                      <span className="arabic-text text-xl">
-                        ({rule.letter})
+                <div key={i} className={`rounded-lg border p-3 ${bg}`}>
+                  <p className="text-sm font-semibold">
+                    {r.level === "critical" && "⚠️ "}
+                    {r.level === "important" && "💡 "}
+                    {r.rule} {r.letter && <span dir="rtl">({r.letter})</span>}
+                    {r.context && (
+                      <span className="ml-1 font-normal text-gray-500">
+                        · {r.context}
                       </span>
                     )}
-                    {rule.context && (
-                      <span className="text-sm font-normal">
-                        • {rule.context}
-                      </span>
-                    )}
-                  </div>
-                  <div className={`text-sm ${textColor} opacity-90`}>
-                    {rule.description}
-                  </div>
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-600">
+                    {r.description}
+                  </p>
                 </div>
               );
             })}
@@ -239,15 +190,13 @@ export default function FeedbackPanel({
         </div>
       )}
 
-      {/* No Errors - Perfect! */}
+      {/* Perfect */}
       {tajweed?.errors?.length === 0 && score >= 90 && (
-        <div className="bg-green-50 rounded-lg p-6 text-center">
-          <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-3" />
-          <h4 className="text-xl font-bold text-green-900 mb-2">
-            Excellent Work!
-          </h4>
-          <p className="text-green-700">
-            Your recitation is very accurate. Keep up the great work!
+        <div className="rounded-xl bg-emerald-50 p-5 text-center">
+          <CheckCircle className="mx-auto mb-2 h-12 w-12 text-emerald-500" />
+          <h4 className="font-bold text-emerald-800">Excellent!</h4>
+          <p className="text-sm text-emerald-700">
+            Very accurate recitation. Keep it up!
           </p>
         </div>
       )}

@@ -19,100 +19,99 @@ export default function ReciteSurahPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSurahs = async () => {
+    (async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/quran/surahs");
-        const data = await response.json();
-        if (data.surahs && Array.isArray(data.surahs)) {
-          setSurahs(data.surahs);
-        }
-      } catch (error) {
-        console.error("Error fetching surahs:", error);
+        const res = await fetch("http://localhost:8000/api/quran/surahs");
+        const data = await res.json();
+        if (data.surahs) setSurahs(data.surahs);
+      } catch (e) {
+        console.error("Error fetching surahs:", e);
       } finally {
         setLoading(false);
       }
-    };
-    fetchSurahs();
+    })();
   }, []);
 
+  if (selectedSurah) {
+    return (
+      <FullSurahRecitation
+        surahNumber={selectedSurah}
+        onBack={() => setSelectedSurah(null)}
+      />
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
+    <main className="min-h-screen">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span>Back to Home</span>
-            </Link>
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-6 w-6 text-emerald-600" />
-              <h1 className="text-xl font-bold text-gray-900">Recite Surah</h1>
-            </div>
+      <header className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 text-sm text-gray-600 transition hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Home</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-emerald-600" />
+            <h1 className="text-base font-bold sm:text-lg">Recite Surah</h1>
           </div>
+          <div className="w-10 sm:w-14" />
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        {!selectedSurah ? (
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <h2 className="text-3xl font-bold text-center mb-6 text-gray-900">
-                Select a Surah to Recite
-              </h2>
-              <p className="text-center text-gray-600 mb-8">
-                Choose a Surah from the list below. You'll recite each ayah and
-                receive instant verification feedback.
-              </p>
+      {/* Surah Picker */}
+      <div className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-lg sm:p-8">
+          <h2 className="mb-1 text-center text-xl font-bold sm:text-2xl">
+            Select a Surah
+          </h2>
+          <p className="mb-6 text-center text-sm text-gray-500">
+            Choose a Surah to start reciting
+          </p>
 
-              {loading ? (
-                <p className="text-center text-gray-600">Loading surahs...</p>
-              ) : (
-                <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                  {surahs.map((surah) => (
-                    <button
-                      key={surah.number}
-                      onClick={() => setSelectedSurah(surah.number)}
-                      className="w-full text-left px-6 py-4 rounded-lg border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50 transition-all"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <span className="text-2xl font-bold text-emerald-600">
-                            {surah.number}
-                          </span>
-                          <div>
-                            <div className="font-semibold text-gray-900">
-                              {surah.englishName}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              {surah.englishNameTranslation}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-2xl text-emerald-900 mb-1">
-                            {surah.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {surah.numberOfAyahs} Ayahs
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
             </div>
-          </div>
-        ) : (
-          <FullSurahRecitation
-            surahNumber={selectedSurah}
-            onBack={() => setSelectedSurah(null)}
-          />
-        )}
+          ) : (
+            <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[65vh]">
+              {surahs.map((surah) => (
+                <button
+                  key={surah.number}
+                  onClick={() => setSelectedSurah(surah.number)}
+                  className="group flex w-full items-center justify-between rounded-xl border border-gray-100 px-4 py-3 text-left transition hover:border-emerald-400 hover:bg-emerald-50 active:scale-[.99] sm:px-5 sm:py-4"
+                >
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-sm font-bold text-emerald-700 sm:h-10 sm:w-10">
+                      {surah.number}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900 sm:text-base">
+                        {surah.englishName}
+                      </p>
+                      <p className="truncate text-xs text-gray-500 sm:text-sm">
+                        {surah.englishNameTranslation}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p
+                      className="text-lg text-emerald-800 sm:text-xl"
+                      dir="rtl"
+                    >
+                      {surah.name}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {surah.numberOfAyahs} Ayahs
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );

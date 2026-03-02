@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ArrowLeft, Mic, MicOff } from "lucide-react";
 import AyahDisplay from "./AyahDisplay";
 import FeedbackPanel from "./FeedbackPanel";
 import AudioVisualizer from "./AudioVisualizer";
 import { useRecitationWebSocket } from "@/lib/useRecitationWebSocket";
 
-interface RecitationInterfaceProps {
+interface Props {
   surahNumber: number;
   ayahNumber: number;
   onBack: () => void;
@@ -17,10 +17,10 @@ export default function RecitationInterface({
   surahNumber,
   ayahNumber,
   onBack,
-}: RecitationInterfaceProps) {
+}: Props) {
   const [isRecording, setIsRecording] = useState(false);
-  const [ayahText, setAyahText] = useState<string>("");
-  const [surahName, setSurahName] = useState<string>("");
+  const [ayahText, setAyahText] = useState("");
+  const [surahName, setSurahName] = useState("");
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -28,7 +28,6 @@ export default function RecitationInterface({
   const { analysis, isConnected, sendAudioData, resetAnalysis } =
     useRecitationWebSocket();
 
-  // Fetch ayah text
   useEffect(() => {
     fetchAyahData();
     resetAnalysis();
@@ -36,15 +35,13 @@ export default function RecitationInterface({
 
   const fetchAyahData = async () => {
     try {
-      const response = await fetch(
+      const res = await fetch(
         `http://localhost:8000/api/quran/ayah/${surahNumber}/${ayahNumber}`,
       );
-      const data = await response.json();
+      const data = await res.json();
       setAyahText(data.text || "");
       setSurahName(data.surahEnglishName || "");
-    } catch (error) {
-      console.error("Error fetching ayah:", error);
-      // Fallback data
+    } catch {
       if (surahNumber === 1 && ayahNumber === 1) {
         setAyahText("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ");
         setSurahName("Al-Fatihah");
@@ -56,36 +53,26 @@ export default function RecitationInterface({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMediaStream(stream);
-
-      // Create MediaRecorder with appropriate MIME type
       const mimeType = MediaRecorder.isTypeSupported("audio/webm")
         ? "audio/webm"
         : "audio/ogg";
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = mediaRecorder;
+      const mr = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mr;
       audioChunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        await sendAudioForAnalysis(audioBlob);
-
-        // Stop all tracks
-        stream.getTracks().forEach((track) => track.stop());
+      mr.onstop = async () => {
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        await sendAudioForAnalysis(blob);
+        stream.getTracks().forEach((t) => t.stop());
         setMediaStream(null);
       };
-
-      // Start recording with data chunks every second
-      mediaRecorder.start(1000);
+      mr.start(1000);
       setIsRecording(true);
       resetAnalysis();
-    } catch (error) {
-      console.error("Error starting recording:", error);
+    } catch {
       alert("Could not access microphone. Please grant permission.");
     }
   };
@@ -97,35 +84,28 @@ export default function RecitationInterface({
     }
   };
 
-  const sendAudioForAnalysis = async (audioBlob: Blob) => {
-    try {
-      // Convert blob to base64
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64Audio = reader.result?.toString().split(",")[1] || "";
-        sendAudioData(base64Audio, surahNumber, ayahNumber);
-      };
-      reader.readAsDataURL(audioBlob);
-    } catch (error) {
-      console.error("Error sending audio:", error);
-    }
+  const sendAudioForAnalysis = async (blob: Blob) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const b64 = reader.result?.toString().split(",")[1] || "";
+      sendAudioData(b64, surahNumber, ayahNumber);
+    };
+    reader.readAsDataURL(blob);
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Back button */}
+    <div className="mx-auto max-w-5xl">
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
+        className="mb-5 flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-900"
       >
-        <ArrowLeft className="h-5 w-5" />
-        Choose different Ayah
+        <ArrowLeft className="h-4 w-4" /> Choose different Ayah
       </button>
 
-      {/* Main Grid */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Left: Ayah Display */}
-        <div className="space-y-6">
+      {/* Two-column on lg, stack on mobile */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        {/* Left */}
+        <div className="space-y-5">
           <AyahDisplay
             surahNumber={surahNumber}
             ayahNumber={ayahNumber}
@@ -135,63 +115,49 @@ export default function RecitationInterface({
             errors={analysis?.tajweed?.errors || []}
           />
 
-          {/* Recording Controls */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <div className="text-center">
-              <h3 className="text-xl font-bold text-gray-900 mb-6">
-                {isRecording ? "🎤 Recording..." : "Ready to Recite"}
-              </h3>
+          {/* Recording card */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-lg text-center sm:p-8">
+            <h3 className="mb-4 text-base font-bold sm:text-lg">
+              {isRecording ? "🎤 Recording…" : "Ready to Recite"}
+            </h3>
 
-              {/* Connection Status */}
-              <div className="mb-4">
-                <span
-                  className={`inline-flex items-center gap-2 text-sm ${isConnected ? "text-green-600" : "text-red-600"}`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-600" : "bg-red-600"}`}
-                  ></span>
-                  {isConnected ? "Connected to server" : "Connecting..."}
-                </span>
-              </div>
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs ${isConnected ? "text-emerald-600" : "text-red-500"}`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${isConnected ? "bg-emerald-500" : "bg-red-500"}`}
+              />
+              {isConnected ? "Connected" : "Connecting…"}
+            </span>
 
-              {/* Audio Visualizer */}
-              <div className="mb-6 relative">
-                <AudioVisualizer
-                  isRecording={isRecording}
-                  stream={mediaStream}
-                />
-              </div>
-
-              {/* Recording Button */}
-              <button
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={!isConnected}
-                className={`w-32 h-32 rounded-full flex items-center justify-center mx-auto transition-all ${
-                  isRecording
-                    ? "bg-red-500 hover:bg-red-600 recording-pulse"
-                    : "bg-emerald-600 hover:bg-emerald-700"
-                } disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl`}
-              >
-                {isRecording ? (
-                  <MicOff className="h-12 w-12 text-white" />
-                ) : (
-                  <Mic className="h-12 w-12 text-white" />
-                )}
-              </button>
-
-              <p className="mt-4 text-gray-600">
-                {isRecording
-                  ? "Click to stop recording"
-                  : "Click to start recording"}
-              </p>
+            <div className="relative my-5">
+              <AudioVisualizer isRecording={isRecording} stream={mediaStream} />
             </div>
+
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={!isConnected}
+              className={`mx-auto flex h-24 w-24 items-center justify-center rounded-full shadow-xl transition-all active:scale-95 sm:h-28 sm:w-28 ${
+                isRecording
+                  ? "bg-red-500 recording-pulse"
+                  : "bg-emerald-600 hover:bg-emerald-700"
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+            >
+              {isRecording ? (
+                <MicOff className="h-10 w-10 text-white" />
+              ) : (
+                <Mic className="h-10 w-10 text-white" />
+              )}
+            </button>
+
+            <p className="mt-3 text-xs text-gray-500 sm:text-sm">
+              {isRecording ? "Tap to stop" : "Tap to start"}
+            </p>
           </div>
         </div>
 
-        {/* Right: Feedback Panel */}
-        <div>
-          <FeedbackPanel analysis={analysis} expectedText={ayahText} />
-        </div>
+        {/* Right — feedback */}
+        <FeedbackPanel analysis={analysis} expectedText={ayahText} />
       </div>
     </div>
   );

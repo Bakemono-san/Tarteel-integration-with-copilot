@@ -1,9 +1,8 @@
 "use client";
 
-import AudioPlayer from "./AudioPlayer";
 import QuranAudioPlayer from "./QuranAudioPlayer";
 
-interface AyahDisplayProps {
+interface Props {
   surahNumber: number;
   ayahNumber: number;
   surahName: string;
@@ -25,55 +24,62 @@ export default function AyahDisplay({
   ayahText,
   transcription,
   errors = [],
-}: AyahDisplayProps) {
+}: Props) {
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-8">
-      {/* Surah Info */}
-      <div className="text-center mb-6 border-b pb-4">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {surahName} - Ayah {ayahNumber}
+    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-lg sm:p-8">
+      {/* Header */}
+      <div className="mb-5 border-b border-gray-100 pb-4 text-center">
+        <h2 className="text-lg font-bold sm:text-xl">
+          {surahName} — Ayah {ayahNumber}
         </h2>
-        <p className="text-sm text-gray-600">
-          Surah {surahNumber}, Ayah {ayahNumber}
-        </p>
+        <p className="text-xs text-gray-500">Surah {surahNumber}</p>
       </div>
 
-      {/* Ayah Text */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-700">Original Ayah</h3>
-          {surahNumber && ayahNumber && (
-            <QuranAudioPlayer
-              surahNumber={surahNumber}
-              ayahNumber={ayahNumber}
-              reciter="ar.alafasy"
-            />
-          )}
+      {/* Original ayah */}
+      <div className="mb-5">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-600">Original Ayah</h3>
+          <QuranAudioPlayer
+            surahNumber={surahNumber}
+            ayahNumber={ayahNumber}
+            reciter="ar.alafasy"
+          />
         </div>
-        <div className="ayah-text bg-emerald-50 rounded-xl p-6 text-emerald-900">
-          {ayahText || "Loading..."}
+        <div className="rounded-xl bg-emerald-50 p-4 text-center sm:p-6">
+          <p
+            className="arabic-text !text-xl text-emerald-900 sm:!text-2xl"
+            dir="rtl"
+          >
+            {ayahText || "Loading…"}
+          </p>
         </div>
       </div>
 
-      {/* Transcription */}
+      {/* User transcription */}
       {transcription && (
-        <div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">
+        <div className="mb-5">
+          <h3 className="mb-2 text-center text-sm font-semibold text-gray-600">
             Your Recitation
           </h3>
-          <div className="ayah-text bg-blue-50 rounded-xl p-6 text-blue-900">
-            {transcription}
+          <div className="rounded-xl bg-sky-50 p-4 text-center sm:p-6">
+            <p
+              className="arabic-text !text-xl text-sky-900 sm:!text-2xl"
+              dir="rtl"
+            >
+              {transcription}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Quick Tips */}
-      <div className="mt-6 bg-amber-50 rounded-lg p-4">
-        <h4 className="font-semibold text-amber-900 mb-2">💡 Quick Tips:</h4>
-        <ul className="text-sm text-amber-800 space-y-1">
-          <li>• Recite clearly and at a moderate pace</li>
+      {/* Tips */}
+      <div className="rounded-lg bg-amber-50 p-3 sm:p-4">
+        <h4 className="mb-1 text-xs font-semibold text-amber-800 sm:text-sm">
+          💡 Quick tips
+        </h4>
+        <ul className="space-y-0.5 text-xs text-amber-700">
+          <li>• Recite clearly at a moderate pace</li>
           <li>• Pay attention to Tajweed rules</li>
-          <li>• Ensure proper pronunciation of each letter</li>
           <li>• Practice in a quiet environment</li>
         </ul>
       </div>

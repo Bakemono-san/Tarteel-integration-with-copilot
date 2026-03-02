@@ -1,211 +1,197 @@
 import Link from "next/link";
-import { BookOpen, Mic, TrendingUp, Award, Volume2 } from "lucide-react";
+import { BookOpen, Mic, TrendingUp, Volume2 } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-8 w-8 text-emerald-600" />
-              <h1 className="text-2xl font-bold text-gray-900">
-                Quran Recitation
-              </h1>
-            </div>
-            <nav className="flex gap-4">
-              <Link
-                href="/recitation"
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
-              >
-                Start Reciting
-              </Link>
-              <Link
-                href="/recite-surah"
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-              >
-                Recite Surah
-              </Link>
-              <Link
-                href="/speech-to-text"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              >
-                Speech-to-Text
-              </Link>
-            </nav>
-          </div>
+    <main className="min-h-screen flex flex-col">
+      {/* ── Header ─────────────────────────────────── */}
+      <header className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2.5 sm:flex-nowrap sm:gap-3 sm:py-4">
+          <Link href="/" className="flex items-center gap-2 shrink-0">
+            <BookOpen className="h-6 w-6 text-emerald-600" />
+            <span className="text-lg font-bold sm:text-xl">
+              Quran&nbsp;Recitation
+            </span>
+          </Link>
+
+          <nav className="flex w-full items-center gap-1.5 sm:w-auto sm:gap-2">
+            <Link
+              href="/recitation"
+              className="flex-1 rounded-full bg-emerald-600 px-2.5 py-1.5 text-center text-[11px] font-semibold text-white transition hover:bg-emerald-700 sm:flex-none sm:px-4 sm:py-2 sm:text-sm"
+            >
+              Recite
+            </Link>
+            <Link
+              href="/recite-surah"
+              className="flex-1 rounded-full bg-purple-600 px-2.5 py-1.5 text-center text-[11px] font-semibold text-white transition hover:bg-purple-700 sm:flex-none sm:px-4 sm:py-2 sm:text-sm"
+            >
+              Surah
+            </Link>
+            <Link
+              href="/speech-to-text"
+              className="flex-1 rounded-full bg-sky-600 px-2.5 py-1.5 text-center text-[11px] font-semibold text-white transition hover:bg-sky-700 sm:flex-none sm:px-4 sm:py-2 sm:text-sm"
+            >
+              Practice
+            </Link>
+          </nav>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center max-w-4xl mx-auto">
-          <h2 className="text-5xl font-bold text-gray-900 mb-6">
-            Master Your Quran Recitation
-          </h2>
-          <p className="text-xl text-gray-600 mb-8">
-            Practice with real-time Tajweed correction powered by Tarteel AI
-          </p>
+      {/* ── Hero ───────────────────────────────────── */}
+      <section className="flex flex-1 flex-col items-center justify-center px-4 py-14 text-center sm:py-24">
+        <span className="mb-4 inline-block rounded-full bg-emerald-100 px-4 py-1 text-xs font-semibold text-emerald-800 sm:text-sm">
+          ✨ Powered by Tarteel AI
+        </span>
 
-          <div className="arabic-text text-emerald-700 mb-8">
-            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-          </div>
+        <h1 className="max-w-3xl text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl text-balance">
+          Master Your <span className="text-emerald-600">Quran</span> Recitation
+        </h1>
 
+        <p className="mt-4 max-w-xl text-base text-gray-600 sm:text-lg">
+          Real-time Tajweed analysis, pronunciation feedback, and guided Surah
+          recitation — all in one place.
+        </p>
+
+        <p
+          className="mt-6 text-2xl font-semibold text-emerald-700 sm:text-3xl"
+          dir="rtl"
+        >
+          بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+        </p>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link
-            href="/recitation"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 text-white text-lg rounded-xl hover:bg-emerald-700 transition shadow-lg hover:shadow-xl"
+            href="/recite-surah"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 sm:text-base"
           >
-            <Mic className="h-6 w-6" />
-            Start Reciting Now
+            <Mic className="h-5 w-5" /> Start Reciting
+          </Link>
+          <Link
+            href="/speech-to-text"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-white px-6 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 sm:text-base"
+          >
+            <Volume2 className="h-5 w-5" /> Practice Mode
           </Link>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="container mx-auto px-4 py-16">
-        <h3 className="text-3xl font-bold text-center text-gray-900 mb-12">
+      {/* ── Features ───────────────────────────────── */}
+      <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:py-20">
+        <h2 className="mb-10 text-center text-2xl font-bold sm:text-3xl">
           Features
-        </h3>
+        </h2>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition">
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-              <Mic className="h-8 w-8 text-emerald-600" />
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Real-time Recognition */}
+          <div className="group rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-lg sm:p-8">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 transition group-hover:bg-emerald-600 sm:h-14 sm:w-14">
+              <Mic className="h-6 w-6 text-emerald-600 transition group-hover:text-white sm:h-7 sm:w-7" />
             </div>
-            <h4 className="text-xl font-bold text-gray-900 mb-2">
+            <h3 className="mb-2 text-lg font-bold sm:text-xl">
               Real-time Recognition
-            </h4>
-            <p className="text-gray-600">
-              Advanced Arabic speech recognition using Tarteel AI models to
-              transcribe your recitation instantly
+            </h3>
+            <p className="text-sm leading-relaxed text-gray-600 sm:text-base">
+              Advanced Arabic speech recognition with instant transcription
+              powered by Tarteel AI.
             </p>
           </div>
 
-          <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <BookOpen className="h-8 w-8 text-blue-600" />
+          {/* Tajweed Analysis */}
+          <div className="group rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-lg sm:p-8">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-sky-100 transition group-hover:bg-sky-600 sm:h-14 sm:w-14">
+              <BookOpen className="h-6 w-6 text-sky-600 transition group-hover:text-white sm:h-7 sm:w-7" />
             </div>
-            <h4 className="text-xl font-bold text-gray-900 mb-2">
+            <h3 className="mb-2 text-lg font-bold sm:text-xl">
               Tajweed Analysis
-            </h4>
-            <p className="text-gray-600">
-              Comprehensive Tajweed rule detection including Qalqalah, Ghunna,
-              Madd, and more
+            </h3>
+            <p className="text-sm leading-relaxed text-gray-600 sm:text-base">
+              Comprehensive rule detection — Qalqalah, Ghunna, Madd, Idgham and
+              more.
             </p>
           </div>
 
-          <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition">
-            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-              <TrendingUp className="h-8 w-8 text-purple-600" />
+          {/* Progress Tracking */}
+          <div className="group rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-lg sm:p-8">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 transition group-hover:bg-purple-600 sm:h-14 sm:w-14">
+              <TrendingUp className="h-6 w-6 text-purple-600 transition group-hover:text-white sm:h-7 sm:w-7" />
             </div>
-            <h4 className="text-xl font-bold text-gray-900 mb-2">
+            <h3 className="mb-2 text-lg font-bold sm:text-xl">
               Progress Tracking
-            </h4>
-            <p className="text-gray-600">
-              Get instant feedback with accuracy scores and detailed corrections
-              for improvement
+            </h3>
+            <p className="text-sm leading-relaxed text-gray-600 sm:text-base">
+              Instant accuracy scores and detailed corrections to improve with
+              every session.
             </p>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="container mx-auto px-4 py-16 bg-white/50 rounded-3xl my-16">
-        <h3 className="text-3xl font-bold text-center text-gray-900 mb-12">
+      {/* ── How it works ───────────────────────────── */}
+      <section className="mx-auto w-full max-w-3xl px-4 py-14 sm:py-20">
+        <h2 className="mb-10 text-center text-2xl font-bold sm:text-3xl">
           How It Works
-        </h3>
+        </h2>
 
-        <div className="max-w-3xl mx-auto space-y-6">
-          <div className="flex gap-4">
-            <div className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-              1
-            </div>
-            <div>
-              <h4 className="text-xl font-bold text-gray-900 mb-2">
-                Choose a Surah
-              </h4>
-              <p className="text-gray-600">
-                Select any Surah and Ayah from the Quran that you want to
-                practice
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-              2
-            </div>
-            <div>
-              <h4 className="text-xl font-bold text-gray-900 mb-2">
-                Start Reciting
-              </h4>
-              <p className="text-gray-600">
-                Click the microphone button and recite the Ayah with proper
-                Tajweed
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-              3
-            </div>
-            <div>
-              <h4 className="text-xl font-bold text-gray-900 mb-2">
-                Get Instant Feedback
-              </h4>
-              <p className="text-gray-600">
-                Receive real-time analysis of your recitation with Tajweed
-                corrections and accuracy scores
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-              4
-            </div>
-            <div>
-              <h4 className="text-xl font-bold text-gray-900 mb-2">
-                Improve & Repeat
-              </h4>
-              <p className="text-gray-600">
-                Practice repeatedly with detailed suggestions until you achieve
-                mastery
-              </p>
-            </div>
-          </div>
-        </div>
+        <ol className="space-y-6">
+          {[
+            {
+              n: "1",
+              title: "Choose a Surah",
+              desc: "Select any Surah and Ayah you want to practice.",
+            },
+            {
+              n: "2",
+              title: "Start Reciting",
+              desc: "Tap the microphone and recite with proper Tajweed.",
+            },
+            {
+              n: "3",
+              title: "Get Instant Feedback",
+              desc: "Receive real-time analysis with accuracy scores.",
+            },
+            {
+              n: "4",
+              title: "Improve & Repeat",
+              desc: "Practice until you achieve mastery.",
+            },
+          ].map(({ n, title, desc }) => (
+            <li key={n} className="flex gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white sm:h-11 sm:w-11 sm:text-base">
+                {n}
+              </div>
+              <div>
+                <h3 className="font-bold sm:text-lg">{title}</h3>
+                <p className="text-sm text-gray-600 sm:text-base">{desc}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
       </section>
 
-      {/* Speech-to-Text CTA Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-3xl p-12 text-white text-center max-w-3xl mx-auto">
-          <Volume2 className="h-16 w-16 mx-auto mb-6 text-indigo-100" />
-          <h3 className="text-3xl font-bold mb-4">Try Speech-to-Text</h3>
-          <p className="text-lg mb-8 text-indigo-100">
-            Practice your Arabic speech recognition. Convert your voice to text
-            in real-time with our advanced speech-to-text tool.
+      {/* ── CTA ────────────────────────────────────── */}
+      <section className="mx-auto w-full max-w-3xl px-4 pb-14 sm:pb-20">
+        <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-sky-600 p-8 text-center text-white shadow-xl sm:p-12">
+          <Volume2 className="mx-auto mb-4 h-12 w-12 opacity-80 sm:h-14 sm:w-14" />
+          <h2 className="mb-2 text-2xl font-bold sm:text-3xl">
+            Try Speech‑to‑Text
+          </h2>
+          <p className="mx-auto mb-6 max-w-md text-sm text-indigo-100 sm:text-base">
+            Practice Arabic pronunciation and convert your voice to text in
+            real-time.
           </p>
           <Link
             href="/speech-to-text"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-indigo-600 font-semibold rounded-xl hover:bg-gray-100 transition shadow-lg"
+            className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-indigo-600 shadow transition hover:bg-gray-50 sm:text-base"
           >
-            <Volume2 className="h-6 w-6" />
-            Start Speech-to-Text Practice
+            <Volume2 className="h-5 w-5" /> Start Practice
           </Link>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t bg-white/80 backdrop-blur-sm mt-16">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-gray-600">
-            <p className="mb-2">Powered by Tarteel AI Open Source Models</p>
-            <p className="text-sm">Built with Next.js, FastAPI, and PyTorch</p>
-          </div>
-        </div>
+      {/* ── Footer ─────────────────────────────────── */}
+      <footer className="border-t border-gray-200/60 bg-white/60 py-6 text-center text-sm text-gray-500">
+        <p>Powered by Tarteel AI Open Source Models</p>
+        <p className="mt-1 text-xs">Built with Next.js · FastAPI · PyTorch</p>
       </footer>
     </main>
   );

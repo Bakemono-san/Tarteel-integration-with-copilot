@@ -1,107 +1,78 @@
-'use client'
+"use client";
 
-import { useState, useRef, useEffect } from 'react'
-import { Volume2, VolumeX, Loader } from 'lucide-react'
+import { useState, useRef, useEffect } from "react";
+import { Volume2, VolumeX, Loader } from "lucide-react";
 
-interface AudioPlayerProps {
-  text: string
-  language?: string
-  rate?: number
-  pitch?: number
+interface Props {
+  text: string;
+  language?: string;
+  rate?: number;
+  pitch?: number;
 }
 
 export default function AudioPlayer({
   text,
-  language = 'ar-SA',
+  language = "ar-SA",
   rate = 1,
-  pitch = 1
-}: AudioPlayerProps) {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
-  const synthRef = useRef<SpeechSynthesis | null>(null)
+  pitch = 1,
+}: Props) {
+  const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const synthRef = useRef<SpeechSynthesis | null>(null);
 
   useEffect(() => {
-    // Get speech synthesis instance
-    if (typeof window !== 'undefined') {
-      synthRef.current = window.speechSynthesis
-    }
-  }, [])
+    if (typeof window !== "undefined")
+      synthRef.current = window.speechSynthesis;
+  }, []);
 
-  const handlePlay = () => {
-    if (!text || !synthRef.current) return
-
-    // Cancel any ongoing speech
+  const play = () => {
+    if (!text || !synthRef.current) return;
     if (synthRef.current.speaking) {
-      synthRef.current.cancel()
-      setIsPlaying(false)
-      return
+      synthRef.current.cancel();
+      setPlaying(false);
+      return;
     }
+    setLoading(true);
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = language;
+    u.rate = rate;
+    u.pitch = pitch;
+    u.volume = 1;
+    u.onstart = () => {
+      setLoading(false);
+      setPlaying(true);
+    };
+    u.onend = () => setPlaying(false);
+    u.onerror = () => {
+      setPlaying(false);
+      setLoading(false);
+    };
+    synthRef.current.speak(u);
+  };
 
-    setIsLoading(true)
-
-    // Create new utterance
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = language
-    utterance.rate = rate
-    utterance.pitch = pitch
-    utterance.volume = 1
-
-    utterance.onstart = () => {
-      setIsLoading(false)
-      setIsPlaying(true)
-    }
-
-    utterance.onend = () => {
-      setIsPlaying(false)
-    }
-
-    utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event.error)
-      setIsPlaying(false)
-      setIsLoading(false)
-    }
-
-    utteranceRef.current = utterance
-
-    // Speak
-    synthRef.current.speak(utterance)
-  }
-
-  const handleStop = () => {
-    if (synthRef.current) {
-      synthRef.current.cancel()
-      setIsPlaying(false)
-    }
-  }
+  const stop = () => {
+    synthRef.current?.cancel();
+    setPlaying(false);
+  };
 
   return (
     <button
-      onClick={isPlaying ? handleStop : handlePlay}
-      disabled={isLoading || !text}
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
-        isPlaying
-          ? 'bg-red-500 hover:bg-red-600 text-white'
-          : 'bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed'
+      onClick={playing ? stop : play}
+      disabled={loading || !text}
+      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition sm:text-sm ${
+        playing
+          ? "bg-red-500 text-white hover:bg-red-600"
+          : "bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
       }`}
-      title={isPlaying ? 'Stop audio' : 'Play audio'}
     >
-      {isLoading ? (
-        <>
-          <Loader className="h-4 w-4 animate-spin" />
-          Loading...
-        </>
-      ) : isPlaying ? (
-        <>
-          <VolumeX className="h-4 w-4" />
-          Stop
-        </>
+      {loading ? (
+        <Loader className="h-3.5 w-3.5 animate-spin" />
+      ) : playing ? (
+        <VolumeX className="h-3.5 w-3.5" />
       ) : (
-        <>
-          <Volume2 className="h-4 w-4" />
-          Play Audio
-        </>
+        <Volume2 className="h-3.5 w-3.5" />
       )}
+      {loading ? "…" : playing ? "Stop" : "Listen"}
     </button>
-  )
+  );
 }

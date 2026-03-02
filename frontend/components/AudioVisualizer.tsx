@@ -2,118 +2,79 @@
 
 import { useEffect, useRef } from "react";
 
-interface AudioVisualizerProps {
+interface Props {
   isRecording: boolean;
   stream: MediaStream | null;
 }
 
-export default function AudioVisualizer({
-  isRecording,
-  stream,
-}: AudioVisualizerProps) {
+export default function AudioVisualizer({ isRecording, stream }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number>();
-  const analyserRef = useRef<AnalyserNode>();
-  const audioContextRef = useRef<AudioContext>();
+  const rafRef = useRef<number>();
+  const ctxRef = useRef<AudioContext>();
+  const analyRef = useRef<AnalyserNode>();
 
   useEffect(() => {
-    if (isRecording && stream) {
-      setupVisualizer();
-    } else {
-      cleanup();
-    }
-
+    isRecording && stream ? setup() : cleanup();
     return cleanup;
   }, [isRecording, stream]);
 
-  const setupVisualizer = () => {
+  const setup = () => {
     if (!stream || !canvasRef.current) return;
-
     const canvas = canvasRef.current;
-    const canvasCtx = canvas.getContext("2d");
-    if (!canvasCtx) return;
+    const g = canvas.getContext("2d");
+    if (!g) return;
 
-    // Create audio context
-    const audioContext = new AudioContext();
-    audioContextRef.current = audioContext;
-
-    // Create analyser
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
-    analyserRef.current = analyser;
-
-    // Connect stream to analyser
-    const source = audioContext.createMediaStreamSource(stream);
-    source.connect(analyser);
-
-    // Start visualization
-    visualize(analyser, canvas, canvasCtx);
+    const ac = new AudioContext();
+    ctxRef.current = ac;
+    const an = ac.createAnalyser();
+    an.fftSize = 256;
+    analyRef.current = an;
+    ac.createMediaStreamSource(stream).connect(an);
+    draw(an, canvas, g);
   };
 
-  const visualize = (
-    analyser: AnalyserNode,
-    canvas: HTMLCanvasElement,
-    canvasCtx: CanvasRenderingContext2D,
+  const draw = (
+    an: AnalyserNode,
+    c: HTMLCanvasElement,
+    g: CanvasRenderingContext2D,
   ) => {
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    const draw = () => {
-      animationFrameRef.current = requestAnimationFrame(draw);
-
-      analyser.getByteFrequencyData(dataArray);
-
-      // Clear canvas
-      canvasCtx.fillStyle = "rgb(243, 244, 246)";
-      canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const barWidth = (canvas.width / bufferLength) * 2.5;
-      let barHeight;
+    const buf = new Uint8Array(an.frequencyBinCount);
+    const loop = () => {
+      rafRef.current = requestAnimationFrame(loop);
+      an.getByteFrequencyData(buf);
+      g.fillStyle = "#f9fafb";
+      g.fillRect(0, 0, c.width, c.height);
+      const bw = (c.width / buf.length) * 2.5;
       let x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        barHeight = (dataArray[i] / 255) * canvas.height;
-
-        // Gradient color based on frequency
-        const hue = (i / bufferLength) * 120 + 100; // Green to blue
-        canvasCtx.fillStyle = `hsl(${hue}, 70%, 50%)`;
-
-        canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-
-        x += barWidth + 1;
+      for (let i = 0; i < buf.length; i++) {
+        const h = (buf[i] / 255) * c.height;
+        g.fillStyle = `hsl(${(i / buf.length) * 120 + 140}, 60%, 50%)`;
+        g.fillRect(x, c.height - h, bw, h);
+        x += bw + 1;
       }
     };
-
-    draw();
+    loop();
   };
 
   const cleanup = () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (ctxRef.current?.state !== "closed")
       try {
-        audioContextRef.current.close();
-      } catch (error) {
-        // Silently handle if already closed
-        console.debug("AudioContext already closed");
-      }
-    }
+        ctxRef.current?.close();
+      } catch {}
   };
 
   return (
-    <div className="w-full">
+    <div className="relative w-full">
       <canvas
         ref={canvasRef}
         width={600}
         height={80}
-        className="w-full h-20 bg-gray-100 rounded-lg"
+        className="h-16 w-full rounded-lg bg-gray-50 sm:h-20"
       />
       {!isRecording && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-80 rounded-lg">
-          <p className="text-gray-500 text-sm">
-            Audio visualizer will appear when recording
-          </p>
+        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-gray-50/80">
+          <p className="text-xs text-gray-400">Audio waveform appears here</p>
         </div>
       )}
     </div>
