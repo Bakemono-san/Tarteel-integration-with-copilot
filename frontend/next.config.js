@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  output: "standalone", // Pour Docker production
+  output: "standalone",
 
   // Configuration API
   async rewrites() {
@@ -11,7 +11,7 @@ const nextConfig = {
         source: "/api/:path*",
         destination: process.env.NEXT_PUBLIC_API_URL
           ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`
-          : "http://185.245.183.209:8081/api/:path*",
+          : "https://185.245.183.209:8081/api/:path*",
       },
     ];
   },
