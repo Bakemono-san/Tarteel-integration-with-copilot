@@ -13,6 +13,9 @@ interface Ayah {
 }
 
 export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
+  useEffect(() => {
+    console.log("[FullSurahRecitation] mounted — new code loaded ✅");
+  }, []);
   const [ayahs, setAyahs] = useState<Ayah[]>([]);
   const [surahName, setSurahName] = useState("");
   const [displayAyahs, setDisplayAyahs] = useState<Ayah[]>([]);
@@ -69,9 +72,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
     (async () => {
       try {
         setIsLoading(true);
-        const res = await fetch(
-          `/api/quran/surah/${surahNumber}`,
-        );
+        const res = await fetch(`/api/quran/surah/${surahNumber}`);
         if (!res.ok) throw new Error();
         const data = await res.json();
         setSurahName(data.surah?.englishName || "");
@@ -91,6 +92,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
 
   /* ── Analyse recitation ────────────────────────── */
   const handleAnalyze = async () => {
+    console.log("[handleAnalyze] called, transcript:", transcript.slice(0, 60));
     if (!transcript.trim()) {
       setError("Please recite first.");
       return;
@@ -101,20 +103,21 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
         .map((a) => a.text)
         .join(" ")
         .replace(/\s+/g, " ");
-      const res = await fetch(
-        "/api/quran/analyze-recitation",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            transcript,
-            expected_text: expected,
-            surah_number: surahNumber,
-            ayahs: displayAyahs,
-          }),
-        },
-      );
+      const res = await fetch("/api/quran/analyze-recitation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript,
+          expected_text: expected,
+          surah_number: surahNumber,
+          ayahs: displayAyahs,
+        }),
+      });
       const data = await res.json();
+      console.log(
+        "[analyze-recitation] response:",
+        JSON.stringify(data, null, 2),
+      );
       setAnalysisResults(data);
       if (data.errors?.length) {
         const m: Record<number, any> = {};

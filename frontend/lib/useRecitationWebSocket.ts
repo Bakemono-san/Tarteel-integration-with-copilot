@@ -27,12 +27,10 @@ export function useRecitationWebSocket() {
 
   const connect = useCallback(() => {
     try {
-      const wsUrl = `wss://api.185.245.183.209.nip.io/ws/recitation`;
-      console.log("Connecting to WebSocket:", wsUrl);
+      const wsUrl = `ws://localhost:8000/ws/recitation`;
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
-        console.log("WebSocket connected");
         setIsConnected(true);
 
         // Send ping to keep connection alive
@@ -55,7 +53,6 @@ export function useRecitationWebSocket() {
             setAnalysis(data);
           } else if (data.type === "pong") {
             // Connection is alive
-            console.log("Pong received");
           }
         } catch (error) {
           console.error("Error parsing WebSocket message:", error);
@@ -67,13 +64,11 @@ export function useRecitationWebSocket() {
       };
 
       ws.onclose = () => {
-        console.log("WebSocket disconnected");
         setIsConnected(false);
         wsRef.current = null;
 
         // Attempt to reconnect after 3 seconds
         reconnectTimeoutRef.current = setTimeout(() => {
-          console.log("Attempting to reconnect...");
           connect();
         }, 3000);
       };
