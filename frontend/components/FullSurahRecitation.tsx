@@ -64,14 +64,14 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
     }
   }, []);
 
+  const [highlight2, setHilight] = useState<string>("");
+
   /* ── Fetch surah ───────────────────────────────── */
   useEffect(() => {
     (async () => {
       try {
         setIsLoading(true);
-        const res = await fetch(
-          `/api/quran/surah/${surahNumber}`,
-        );
+        const res = await fetch(`/api/quran/surah/${surahNumber}`);
         if (!res.ok) throw new Error();
         const data = await res.json();
         setSurahName(data.surah?.englishName || "");
@@ -101,20 +101,19 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
         .map((a) => a.text)
         .join(" ")
         .replace(/\s+/g, " ");
-      const res = await fetch(
-        "/api/quran/analyze-recitation",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            transcript,
-            expected_text: expected,
-            surah_number: surahNumber,
-            ayahs: displayAyahs,
-          }),
-        },
-      );
+      const res = await fetch("/api/quran/analyze-recitation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript,
+          expected_text: expected,
+          surah_number: surahNumber,
+          ayahs: displayAyahs,
+        }),
+      });
       const data = await res.json();
+      console.log("[analyze-recitation] response:", data);
+
       setAnalysisResults(data);
       if (data.errors?.length) {
         const m: Record<number, any> = {};
@@ -147,6 +146,71 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
       } catch {}
   };
 
+  const normalizeArabic = (str: string) =>
+    str
+      .replace(
+        /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED]/g,
+        "",
+      )
+      .replace(/[\u0622\u0623\u0625\u0671]/g, "\u0627")
+      .replace(/\u0629/g, "\u0647")
+      .replace(/\u0624/g, "\u0648")
+      .replace(/\u0626/g, "\u064A")
+      .replace(/\u0649/g, "\u064A")
+      .replace(/\u0640/g, "")
+      .replace(/[\uFEFF\u200B\u200C\u200D\u00AD]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  // "You said" — wrong words highlighted in red (inline styles, not Tailwind, to avoid purging)
+  const highlightTranscript = (): string => {
+    if (!analysisResults) return transcript;
+    const errors: any[] = analysisResults.errors ?? [];
+    const wrongSet = new Set(
+      errors
+        .filter(
+          (e) =>
+            (e.type === "substitution" || e.type === "insertion") && e.actual,
+        )
+        .map((e) => normalizeArabic(e.actual)),
+    );
+    const raw: string = analysisResults.transcript || transcript;
+    return raw
+      .trim()
+      .split(/\s+/)
+      .map((w) =>
+        wrongSet.has(normalizeArabic(w))
+          ? `<span style="background:rgba(239,68,68,0.9);color:#fff;font-weight:700;border-radius:3px;padding:0 3px;">${w}</span>`
+          : w,
+      )
+      .join(" ");
+  };
+
+  // "Expected" — omitted/substituted words underlined in amber (inline styles)
+  const highlightExpected = (): string => {
+    if (!analysisResults) return displayAyahs.map((a) => a.text).join(" ");
+    const errors: any[] = analysisResults.errors ?? [];
+    const omitSet = new Set(
+      errors
+        .filter(
+          (e) =>
+            (e.type === "omission" || e.type === "substitution") && e.expected,
+        )
+        .map((e) => normalizeArabic(e.expected)),
+    );
+    const raw: string =
+      analysisResults.expected || displayAyahs.map((a) => a.text).join(" ");
+    return raw
+      .trim()
+      .split(/\s+/)
+      .map((w) =>
+        omitSet.has(normalizeArabic(w))
+          ? `<span style="text-decoration:underline;text-decoration-color:#f59e0b;text-decoration-thickness:2px;text-underline-offset:4px;color:#b45309;font-weight:700;">${w}</span>`
+          : w,
+      )
+      .join(" ");
+  };
+
   const highlight = (text: string, num: number) => {
     if (!highlightedAyahs[num]?.length) return text;
     let r = text;
@@ -155,7 +219,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
         const esc = e.expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         r = r.replace(
           new RegExp(`\\b${esc}\\b`, "g"),
-          `<span class="rounded bg-red-500/90 px-1 text-white font-bold">$&</span>`,
+          `<span style="background:rgba(239,68,68,0.9);color:#fff;font-weight:700;border-radius:3px;padding:0 4px;">$&</span>`,
         );
       }
     });
@@ -267,10 +331,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
               <p className="mb-1 text-xs font-semibold text-sky-800">
                 Your recitation
               </p>
-              <p
-                className="mb-4 text-sm leading-relaxed text-gray-800 line-clamp-4 sm:line-clamp-none"
-                dir="rtl"
-              >
+              <p className="mb-4 text-sm leading-relaxed text-gray-800 line-clamp-4 sm:line-clamp-none">
                 {transcript}
               </p>
               <button
@@ -322,11 +383,10 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
                   You said
                 </p>
                 <div
-                  className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm"
+                  className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm leading-loose"
                   dir="rtl"
-                >
-                  {transcript}
-                </div>
+                  dangerouslySetInnerHTML={{ __html: highlightTranscript() }}
+                />
               </div>
 
               {/* expected */}
@@ -334,12 +394,15 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
                 <p className="mb-1.5 text-xs font-semibold text-gray-500">
                   Expected
                 </p>
-                <div
-                  className="quran-page rounded-lg border border-amber-200 bg-amber-50 p-3 !text-base !leading-relaxed"
-                  dir="rtl"
-                >
-                  {displayAyahs.map((a) => a.text).join(" ")}
+                <div className="mb-1 flex items-center gap-1.5 text-xs text-amber-700">
+                  <span className="inline-block h-3 w-5 rounded-sm border-b-2 border-amber-500 bg-amber-100" />
+                  Underlined words were omitted or mispronounced
                 </div>
+                <div
+                  className="quran-page rounded-lg border border-amber-200 bg-amber-50 p-3 !text-base !leading-loose"
+                  dir="rtl"
+                  dangerouslySetInnerHTML={{ __html: highlightExpected() }}
+                />
               </div>
 
               {/* errors */}

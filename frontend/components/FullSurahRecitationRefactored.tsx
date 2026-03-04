@@ -168,6 +168,7 @@ export default function FullSurahRecitation({
       );
 
       const data = await response.json();
+      console.log("Analysis response:", data);
       setAnalysisResults(data);
 
       if (data.errors && data.errors.length > 0) {

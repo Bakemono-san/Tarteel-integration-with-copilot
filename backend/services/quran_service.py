@@ -17,6 +17,9 @@ class QuranService:
         self.surah_info = self._load_or_fetch_surah_info()
         self.quran_data = self._load_or_fetch_quran_data()
 
+        # Validate cache completeness
+        self._validate_cache()
+
     def _load_or_fetch_surah_info(self) -> Dict:
         """Load surah info from cache or fetch from API"""
         cache_file = self.cache_dir / "surah_info.json"
@@ -75,18 +78,25 @@ class QuranService:
                 with open(cache_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     total_ayahs = sum(len(ayahs) for ayahs in data.values())
-                    print(f"✅ Loaded {total_ayahs} ayahs from cache")
-                    return data
+                    print(f"✅ Loaded {total_ayahs} ayahs from {len(data)} surahs in cache")
+
+                    # Validate that we have all surahs
+                    if len(data) < 114:
+                        print(f"⚠️  Cache incomplete: only {len(data)}/114 surahs. Refetching...")
+                        # Fall through to fetch from API
+                    else:
+                        return data
             except Exception as e:
                 print(f"⚠️  Cache read error: {e}")
 
         # Fetch from API - using Uthmani script with full tashkeel
-        print("📡 Fetching complete Quran with tashkeel from Quran.cloud API (may take a moment)...")
+        print("📡 Fetching complete Quran with tashkeel from Quran.cloud API...")
+        print("   (This may take 30-60 seconds...)")
         try:
             # Use quran-uthmani for full Uthmanic script with all diacritics
             response = requests.get(
                 'http://api.alquran.cloud/v1/quran/quran-uthmani',
-                timeout=30
+                timeout=60
             )
 
             if response.status_code == 200:
@@ -104,6 +114,12 @@ class QuranService:
                             ayah_num = str(ayah['numberInSurah'])
                             quran_data[surah_num][ayah_num] = ayah['text']
 
+                    # Validate before caching
+                    if len(quran_data) != 114:
+                        print(f"⚠️  API returned incomplete data: {len(quran_data)}/114 surahs")
+                    else:
+                        print(f"✅ Fetched all {len(quran_data)} surahs from API")
+
                     # Cache it
                     try:
                         with open(cache_file, 'w', encoding='utf-8') as f:
@@ -114,6 +130,12 @@ class QuranService:
                         print(f"⚠️  Cache write error: {e}")
 
                     return quran_data
+                else:
+                    print(f"❌ API returned error code: {data.get('code')}")
+            else:
+                print(f"❌ API request failed with status: {response.status_code}")
+        except requests.Timeout:
+            print(f"❌ API request timeout (>60s)")
         except Exception as e:
             print(f"❌ API fetch error: {e}")
 
@@ -122,17 +144,21 @@ class QuranService:
         return self._get_fallback_quran_data()
 
     def _get_fallback_surah_info(self) -> Dict:
-        """Minimal fallback surah info"""
-        return {
-            str(i): {
-                'name': f'Surah {i}',
-                'englishName': f'Surah {i}',
-                'englishNameTranslation': f'Surah {i}',
-                'revelation': 'Unknown',
-                'ayahs': 7
+        """Fallback surah info using local database"""
+        from ..quran_database import QURAN_DATA
+
+        surah_info = {}
+        for surah_num_str, data in QURAN_DATA.items():
+            surah_info[surah_num_str] = {
+                'name': data.get('name', f'Surah {surah_num_str}'),
+                'englishName': data.get('englishName', f'Surah {surah_num_str}'),
+                'englishNameTranslation': data.get('englishNameTranslation', ''),
+                'revelation': data.get('revelation', 'Unknown'),
+                'ayahs': data.get('ayahs', 1)
             }
-            for i in range(1, 115)
-        }
+
+        print(f"📚 Using fallback surah info: {len(surah_info)} surahs")
+        return surah_info
 
     def _get_fallback_quran_data(self) -> Dict:
         """Minimal fallback Quran data"""
@@ -210,3 +236,38 @@ class QuranService:
             return self.quran_data[surah_key][ayah_key]
 
         return ""
+
+    def _validate_cache(self):
+        """Validate that all 114 surahs are loaded"""
+        missing_surahs = []
+        empty_surahs = []
+
+        for surah_num in range(1, 115):
+            surah_key = str(surah_num)
+
+            # Check if surah exists
+            if surah_key not in self.quran_data:
+                missing_surahs.append(surah_num)
+            elif len(self.quran_data[surah_key]) == 0:
+                empty_surahs.append(surah_num)
+
+        # Log results
+        total_surahs = len(self.quran_data)
+        total_ayahs = sum(len(ayahs) for ayahs in self.quran_data.values())
+
+        print(f"\n{'='*60}")
+        print(f"📖 QURAN DATA LOADED")
+        print(f"{'='*60}")
+        print(f"Total Surahs: {total_surahs}/114")
+        print(f"Total Ayahs:  {total_ayahs}")
+
+        if missing_surahs:
+            print(f"\n⚠️  WARNING: Missing {len(missing_surahs)} surah(s): {missing_surahs}")
+            print(f"   Run: rm -rf cache/*.json && restart backend to regenerate cache")
+        else:
+            print(f"✅ All 114 surahs loaded")
+
+        if empty_surahs:
+            print(f"\n⚠️  WARNING: Empty {len(empty_surahs)} surah(s): {empty_surahs}")
+
+        print(f"{'='*60}\n")
