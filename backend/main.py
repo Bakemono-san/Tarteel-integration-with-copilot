@@ -308,36 +308,43 @@ def find_ayah_sequence(normalized_text: str) -> dict:
     best_sequence = None
     best_score = 0
 
+    total_surahs_checked = 0
+    surahs_with_errors = []
+
     # Search through all surahs
     for surah_num in range(1, 115):
-        surah_data = quran_service.get_surah(surah_num)
-        if "ayahs" not in surah_data:
-            continue
+        try:
+            surah_data = quran_service.get_surah(surah_num)
+            if "ayahs" not in surah_data:
+                surahs_with_errors.append(surah_num)
+                continue
 
-        ayahs = surah_data["ayahs"]
+            total_surahs_checked += 1
 
-        # Try different starting points
-        for start_idx in range(len(ayahs)):
-            # Try different lengths (1 to 10 ayahs)
-            for length in range(1, min(11, len(ayahs) - start_idx + 1)):
-                # Build concatenated text for this sequence
-                sequence_ayahs = ayahs[start_idx:start_idx + length]
-                sequence_text = " ".join([
-                    normalize_arabic_text(ayah["text"])
-                    for ayah in sequence_ayahs
-                ])
+            ayahs = surah_data["ayahs"]
 
-                # Calculate similarity
-                similarity = calculate_text_similarity(normalized_text, sequence_text)
+            # Try different starting points
+            for start_idx in range(len(ayahs)):
+                # Try different lengths (1 to 10 ayahs)
+                for length in range(1, min(11, len(ayahs) - start_idx + 1)):
+                    # Build concatenated text for this sequence
+                    sequence_ayahs = ayahs[start_idx:start_idx + length]
+                    sequence_text = " ".join([
+                        normalize_arabic_text(ayah["text"])
+                        for ayah in sequence_ayahs
+                    ])
 
-                # Check if this is a better match
-                if similarity > best_score and similarity > 0.6:
-                    best_score = similarity
-                    best_sequence = {
-                        "surah": surah_num,
-                        "start_ayah": sequence_ayahs[0]["number"],
-                        "end_ayah": sequence_ayahs[-1]["number"],
-                        "ayahs": [
+                    # Calculate similarity
+                    similarity = calculate_text_similarity(normalized_text, sequence_text)
+
+                    # Check if this is a better match
+                    if similarity > best_score and similarity > 0.6:
+                        best_score = similarity
+                        best_sequence = {
+                            "surah": surah_num,
+                            "start_ayah": sequence_ayahs[0]["number"],
+                            "end_ayah": sequence_ayahs[-1]["number"],
+                            "ayahs": [
                             {
                                 "surah": surah_num,
                                 "ayah": ayah["number"],
@@ -348,6 +355,14 @@ def find_ayah_sequence(normalized_text: str) -> dict:
                         ],
                         "confidence": similarity
                     }
+        except Exception as e:
+            print(f"⚠️  Error processing Surah {surah_num}: {e}")
+            surahs_with_errors.append(surah_num)
+
+    # Log diagnostic info
+    print(f"🔍 Searched {total_surahs_checked}/114 surahs for ayah sequence")
+    if surahs_with_errors:
+        print(f"⚠️  Failed to process surahs: {surahs_with_errors}")
 
     return best_sequence
 
@@ -356,24 +371,41 @@ def find_single_ayah(normalized_text: str) -> dict:
     best_match = None
     best_similarity = 0
 
+    total_surahs_checked = 0
+    total_ayahs_checked = 0
+    surahs_with_errors = []
+
     for surah_num in range(1, 115):
-        surah_data = quran_service.get_surah(surah_num)
-        if "ayahs" not in surah_data:
-            continue
+        try:
+            surah_data = quran_service.get_surah(surah_num)
+            if "ayahs" not in surah_data:
+                surahs_with_errors.append(surah_num)
+                continue
 
-        for ayah in surah_data["ayahs"]:
-            ayah_normalized = normalize_arabic_text(ayah["text"])
-            similarity = calculate_text_similarity(normalized_text, ayah_normalized)
+            total_surahs_checked += 1
 
-            if similarity > best_similarity:
-                best_similarity = similarity
-                best_match = {
-                    "surah": surah_num,
-                    "ayah": ayah["number"],
-                    "text": ayah["text"],
-                    "similarity": similarity,
-                    "confidence": similarity
-                }
+            for ayah in surah_data["ayahs"]:
+                total_ayahs_checked += 1
+                ayah_normalized = normalize_arabic_text(ayah["text"])
+                similarity = calculate_text_similarity(normalized_text, ayah_normalized)
+
+                if similarity > best_similarity:
+                    best_similarity = similarity
+                    best_match = {
+                        "surah": surah_num,
+                        "ayah": ayah["number"],
+                        "text": ayah["text"],
+                        "similarity": similarity,
+                        "confidence": similarity
+                    }
+        except Exception as e:
+            print(f"⚠️  Error processing Surah {surah_num}: {e}")
+            surahs_with_errors.append(surah_num)
+
+    # Log diagnostic info
+    print(f"🔍 Searched {total_ayahs_checked} ayahs across {total_surahs_checked}/114 surahs")
+    if surahs_with_errors:
+        print(f"⚠️  Failed to process surahs: {surahs_with_errors}")
 
     return best_match
 
