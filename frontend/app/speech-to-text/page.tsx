@@ -40,7 +40,12 @@ export default function SpeechToTextPage() {
 
         {/* STT Component */}
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-lg sm:p-8">
-          <SpeechToText language="ar-SA" onTranscriptionComplete={() => {}} />
+          <SpeechToText
+            language="ar-SA"
+            onTranscriptionComplete={(text) =>
+              console.log("Transcription:", text)
+            }
+          />
         </div>
 
         {/* Tips */}
