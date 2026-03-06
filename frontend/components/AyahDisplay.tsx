@@ -80,7 +80,7 @@ export default function AyahDisplay({
         <ul className="space-y-0.5 text-xs text-amber-700">
           <li>• Recite clearly at a moderate pace</li>
           <li>• Pay attention to Tajweed rules</li>
-          <li>• Practice in a quiet environment</li>
+          <li>• Detect Ayahs in a quiet environment</li>
         </ul>
       </div>
     </div>

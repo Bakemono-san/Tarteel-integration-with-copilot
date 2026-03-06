@@ -5,9 +5,9 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Quran Recitation — Tarteel AI",
+  title: "Tarteel - Quran Recitation App",
   description:
-    "Practice Quran recitation with real-time Tajweed correction using Tarteel AI",
+    "Detect Quran recitation with real-time Tajweed correction using Tarteel AI",
 };
 
 export default function RootLayout({

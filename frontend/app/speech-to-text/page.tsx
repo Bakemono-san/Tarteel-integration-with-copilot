@@ -30,11 +30,11 @@ export default function SpeechToTextPage() {
         {/* Info */}
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-lg text-center sm:p-8">
           <h2 className="mb-2 text-xl font-bold sm:text-2xl">
-            🗣️ Speech‑to‑Text Practice
+            🗣️ Speech‑to‑Text Ayah Detection
           </h2>
           <p className="text-sm leading-relaxed text-gray-600 sm:text-base">
             Speak Arabic and see your speech converted to text in real-time.
-            Great for pronunciation practice.
+            Great for pronunciation and detection.
           </p>
         </div>
 

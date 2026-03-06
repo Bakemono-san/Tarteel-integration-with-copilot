@@ -31,7 +31,7 @@ export default function Home() {
               href="/speech-to-text"
               className="flex-1 rounded-full bg-sky-600 px-2.5 py-1.5 text-center text-[11px] font-semibold text-white transition hover:bg-sky-700 sm:flex-none sm:px-4 sm:py-2 sm:text-sm"
             >
-              Practice
+              Ayah Detection
             </Link>
           </nav>
         </div>
@@ -70,7 +70,7 @@ export default function Home() {
             href="/speech-to-text"
             className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-white px-6 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 sm:text-base"
           >
-            <Volume2 className="h-5 w-5" /> Practice Mode
+            <Volume2 className="h-5 w-5" /> Ayah Detection Mode
           </Link>
         </div>
       </section>
@@ -136,8 +136,8 @@ export default function Home() {
           {[
             {
               n: "1",
-              title: "Choose a Surah",
-              desc: "Select any Surah and Ayah you want to practice.",
+              title: "Select a Surah",
+              desc: "Select any Surah and Ayah you want to detect.",
             },
             {
               n: "2",
@@ -152,7 +152,7 @@ export default function Home() {
             {
               n: "4",
               title: "Improve & Repeat",
-              desc: "Practice until you achieve mastery.",
+              desc: "Repeat until you achieve mastery.",
             },
           ].map(({ n, title, desc }) => (
             <li key={n} className="flex gap-4">
@@ -176,14 +176,14 @@ export default function Home() {
             Try Speech‑to‑Text
           </h2>
           <p className="mx-auto mb-6 max-w-md text-sm text-indigo-100 sm:text-base">
-            Practice Arabic pronunciation and convert your voice to text in
+            Detect Arabic pronunciation and convert your voice to text in
             real-time.
           </p>
           <Link
             href="/speech-to-text"
             className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-indigo-600 shadow transition hover:bg-gray-50 sm:text-base"
           >
-            <Volume2 className="h-5 w-5" /> Start Practice
+            <Volume2 className="h-5 w-5" /> Start Ayah Detection
           </Link>
         </div>
       </section>

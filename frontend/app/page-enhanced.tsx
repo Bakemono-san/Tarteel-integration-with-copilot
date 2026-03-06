@@ -49,7 +49,7 @@ export default function Home() {
                 href="/speech-to-text"
                 className="px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm hover:shadow-md"
               >
-                Practice
+                Ayah Detection
               </Link>
             </nav>
           </div>
@@ -91,7 +91,7 @@ export default function Home() {
               className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-emerald-600 text-base sm:text-lg rounded-xl border-2 border-emerald-600 hover:bg-emerald-50 transition font-semibold"
             >
               <Volume2 className="h-5 w-5 sm:h-6 sm:w-6" />
-              Practice Mode
+              Ayah Detection Mode
             </Link>
           </div>
         </div>
@@ -142,7 +142,7 @@ export default function Home() {
             </h4>
             <p className="text-gray-600 leading-relaxed">
               Monitor your improvement with detailed analytics and insights. See
-              which areas need more practice and celebrate your achievements.
+              which areas need more focus and celebrate your achievements.
             </p>
           </div>
 
@@ -166,10 +166,10 @@ export default function Home() {
               <Mic className="h-7 w-7 text-indigo-600 group-hover:text-white transition" />
             </div>
             <h4 className="text-2xl font-bold text-gray-900 mb-3">
-              Interactive Practice
+              Interactive Ayah Detection
             </h4>
             <p className="text-gray-600 leading-relaxed">
-              Practice at your own pace with interactive recitation modes.
+              Detect Ayahs at your own pace with interactive recitation modes.
               Perfect for beginners and advanced learners alike.
             </p>
           </div>
@@ -241,7 +241,7 @@ export default function Home() {
                 </h4>
                 <p className="text-gray-600">
                   Receive detailed analysis showing your accuracy, errors, and
-                  areas for improvement. See which words need practice.
+                  areas for improvement. See which words need focus.
                 </p>
               </div>
             </div>
