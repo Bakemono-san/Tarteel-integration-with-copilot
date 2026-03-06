@@ -15,7 +15,6 @@ interface Ayah {
 export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
   const [ayahs, setAyahs] = useState<Ayah[]>([]);
   const [surahName, setSurahName] = useState("");
-  const [displayAyahs, setDisplayAyahs] = useState<Ayah[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -28,6 +27,8 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
   );
 
   const recognitionRef = useRef<any>(null);
+  const accumulatedTranscript = useRef<string>("");
+  const isManualStop = useRef<boolean>(false);
 
   /* ── Speech recognition ────────────────────────── */
   useEffect(() => {
@@ -43,28 +44,55 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
       r.continuous = true;
       r.interimResults = true;
       r.lang = "ar-SA";
-      r.onstart = () => setIsListening(true);
+      r.maxAlternatives = 1;
+
+      r.onstart = () => {
+        setIsListening(true);
+      };
+
       r.onresult = (e: any) => {
-        let f = "",
-          i = "";
+        let finalText = "";
+        let interimText = "";
+
         for (let x = e.resultIndex; x < e.results.length; x++) {
           const t = e.results[x][0].transcript;
-          e.results[x].isFinal ? (f += t + " ") : (i += t);
+          if (e.results[x].isFinal) {
+            finalText += t + " ";
+            accumulatedTranscript.current += t + " ";
+          } else {
+            interimText += t;
+          }
         }
-        setTranscript(f + i);
+
+        const fullTranscript = accumulatedTranscript.current + interimText;
+        setTranscript(fullTranscript);
       };
+
       r.onerror = (e: any) => {
-        if (e.error !== "aborted" && e.error !== "no-speech")
+        if (e.error !== "aborted" && e.error !== "no-speech") {
           console.error(e.error);
+        }
       };
-      r.onend = () => setIsListening(false);
+
+      r.onend = () => {
+        if (!isManualStop.current && recognitionRef.current) {
+          setTimeout(() => {
+            try {
+              recognitionRef.current.start();
+            } catch (err) {
+              setIsListening(false);
+            }
+          }, 100);
+        } else {
+          setIsListening(false);
+        }
+      };
+
       recognitionRef.current = r;
     } catch {
       setError("Could not initialise speech recognition.");
     }
   }, []);
-
-  const [highlight2, setHilight] = useState<string>("");
 
   /* ── Fetch surah ───────────────────────────────── */
   useEffect(() => {
@@ -80,7 +108,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
           text: x.text,
         }));
         setAyahs(a);
-        setDisplayAyahs(a.slice(0, 10));
       } catch {
         setError("Failed to load surah.");
       } finally {
@@ -97,7 +124,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
     }
     setIsAnalyzing(true);
     try {
-      const expected = displayAyahs
+      const expected = ayahs
         .map((a) => a.text)
         .join(" ")
         .replace(/\s+/g, " ");
@@ -108,7 +135,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
           transcript,
           expected_text: expected,
           surah_number: surahNumber,
-          ayahs: displayAyahs,
+          ayahs: ayahs,
         }),
       });
       const data = await res.json();
@@ -118,7 +145,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
       if (data.errors?.length) {
         const m: Record<number, any> = {};
         data.errors.forEach((e: any) => {
-          const n = e.ayah_number || displayAyahs[0]?.number;
+          const n = e.ayah_number || ayahs[0]?.number;
           (m[n] ??= []).push(e);
         });
         setHighlightedAyahs(m);
@@ -134,16 +161,26 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
   const start = () => {
     if (recognitionRef.current) {
       setTranscript("");
+      accumulatedTranscript.current = "";
+      isManualStop.current = false;
+
       try {
         recognitionRef.current.start();
-      } catch {}
+      } catch (err) {
+        console.log("Start error:", err);
+      }
     }
   };
+
   const stop = () => {
-    if (recognitionRef.current)
+    if (recognitionRef.current) {
+      isManualStop.current = true;
       try {
         recognitionRef.current.stop();
-      } catch {}
+      } catch (err) {
+        console.log("Stop error:", err);
+      }
+    }
   };
 
   const normalizeArabic = (str: string) =>
@@ -162,7 +199,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
       .replace(/\s+/g, " ")
       .trim();
 
-  // "You said" — wrong words highlighted in red (inline styles, not Tailwind, to avoid purging)
   const highlightTranscript = (): string => {
     if (!analysisResults) return transcript;
     const errors: any[] = analysisResults.errors ?? [];
@@ -186,9 +222,8 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
       .join(" ");
   };
 
-  // "Expected" — omitted/substituted words underlined in amber (inline styles)
   const highlightExpected = (): string => {
-    if (!analysisResults) return displayAyahs.map((a) => a.text).join(" ");
+    if (!analysisResults) return ayahs.map((a) => a.text).join(" ");
     const errors: any[] = analysisResults.errors ?? [];
     const omitSet = new Set(
       errors
@@ -199,7 +234,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
         .map((e) => normalizeArabic(e.expected)),
     );
     const raw: string =
-      analysisResults.expected || displayAyahs.map((a) => a.text).join(" ");
+      analysisResults.expected || ayahs.map((a) => a.text).join(" ");
     return raw
       .trim()
       .split(/\s+/)
@@ -226,7 +261,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
     return r;
   };
 
-  /* ── Loading state ─────────────────────────────── */
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 to-sky-50">
@@ -240,10 +274,8 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
     );
   }
 
-  /* ── Main render ───────────────────────────────── */
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-emerald-50/30 to-sky-50/30">
-      {/* Header */}
       <header className="sticky top-0 z-30 border-b border-gray-200/60 bg-white/95 backdrop-blur-md shadow-sm">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
           <button
@@ -272,7 +304,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
         </div>
       </header>
 
-      {/* Body */}
       <main className="flex-1 mx-auto w-full max-w-4xl px-4 pt-6 pb-36 sm:px-6 sm:pt-8 md:pb-32">
         {error && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5 shadow-sm animate-in slide-in-from-top-2">
@@ -283,9 +314,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
           </div>
         )}
 
-        {/* ── Quran text card ────────────────────────────── */}
         <div className="relative rounded-3xl border-2 border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-amber-50/40 p-5 shadow-xl sm:p-8 lg:p-12 transition-all hover:shadow-2xl">
-          {/* Decorative corner accents */}
           <div className="absolute top-0 left-0 h-20 w-20 border-l-2 border-t-2 border-emerald-200 rounded-tl-3xl opacity-30" />
           <div className="absolute bottom-0 right-0 h-20 w-20 border-r-2 border-b-2 border-emerald-200 rounded-br-3xl opacity-30" />
 
@@ -301,7 +330,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
           )}
 
           <div className="quran-page relative" dir="rtl">
-            {displayAyahs.map((ayah, i) => (
+            {ayahs.map((ayah, i) => (
               <span key={ayah.number}>
                 <span
                   dangerouslySetInnerHTML={{
@@ -311,17 +340,15 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
                 <span className="mx-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 text-xs font-bold text-emerald-800 align-middle ring-1 ring-emerald-200/50 sm:mx-2 sm:h-7 sm:w-7 transition-transform hover:scale-110">
                   {ayah.number}
                 </span>
-                {i < displayAyahs.length - 1 && " "}
+                {i < ayahs.length - 1 && " "}
               </span>
             ))}
           </div>
         </div>
       </main>
 
-      {/* ── Floating mic controls (sticky bottom) ──────────── */}
       <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200/60 bg-white/98 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.08)]">
         <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 sm:py-5">
-          {/* Transcript preview — compact 2-line clamp when done recording */}
           {transcript && !showReview && (
             <div className="mb-3 rounded-xl border border-sky-200/80 bg-gradient-to-br from-sky-50 to-sky-100/50 px-4 py-2.5 shadow-sm animate-in slide-in-from-bottom-2">
               <div className="flex items-start gap-2">
@@ -339,7 +366,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
           )}
 
           <div className="flex items-center justify-center gap-5 sm:gap-8">
-            {/* Mic button */}
             <button
               onClick={isListening ? stop : start}
               className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-xl transition-all active:scale-95 sm:h-20 sm:w-20 ${
@@ -355,11 +381,10 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
               )}
             </button>
 
-            {/* Status & action button */}
             <div className="flex flex-col gap-2.5 min-w-0 flex-1 max-w-xs">
               <p className="text-xs font-semibold text-gray-700 sm:text-sm leading-tight">
                 {isListening
-                  ? "🎤 Listening… tap to stop"
+                  ? "🎤 Recording..."
                   : transcript
                     ? "✅ Recording complete"
                     : "🎙️ Tap mic to start"}
@@ -385,7 +410,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
         </div>
       </div>
 
-      {/* ── Review drawer ───────────────────────────── */}
       {showReview && analysisResults && (
         <>
           <div
@@ -393,7 +417,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
             onClick={() => setShowReview(false)}
           />
           <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-2xl sm:max-w-lg animate-in slide-in-from-right duration-300">
-            {/* drawer header */}
             <div className="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-sky-50 px-5 py-4 sm:px-6">
               <h2 className="text-xl font-bold text-gray-900">📊 Review</h2>
               <button
@@ -404,9 +427,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
               </button>
             </div>
 
-            {/* drawer body */}
             <div className="flex-1 overflow-y-auto p-5 space-y-6 sm:p-6">
-              {/* score card */}
               <div className="rounded-2xl bg-gradient-to-br from-emerald-100 via-emerald-50 to-white p-6 text-center shadow-lg border-2 border-emerald-200/50">
                 <div className="mb-2 inline-flex items-center justify-center h-12 w-12 rounded-full bg-emerald-200/50">
                   <span className="text-2xl">🎯</span>
@@ -419,7 +440,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
                 </p>
               </div>
 
-              {/* you said */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">💬</span>
@@ -434,7 +454,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
                 />
               </div>
 
-              {/* expected */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">📖</span>
@@ -453,7 +472,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
                 />
               </div>
 
-              {/* errors */}
               {analysisResults.errors?.length > 0 ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -507,7 +525,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
               )}
             </div>
 
-            {/* drawer footer */}
             <div className="flex gap-3 border-t border-gray-200 bg-gray-50/80 p-5 sm:p-6">
               <button
                 onClick={() => {
@@ -515,6 +532,8 @@ export default function FullSurahRecitation({ surahNumber, onBack }: Props) {
                   setAnalysisResults(null);
                   setTranscript("");
                   setHighlightedAyahs({});
+                  accumulatedTranscript.current = "";
+                  isManualStop.current = false;
                 }}
                 className="flex-1 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-3 text-sm font-bold text-white shadow-md transition-all hover:shadow-lg hover:from-emerald-700 hover:to-emerald-600 active:scale-95"
               >
