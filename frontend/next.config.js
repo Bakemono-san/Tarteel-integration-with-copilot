@@ -11,7 +11,7 @@ const nextConfig = {
         source: "/api/:path*",
         destination: process.env.NEXT_PUBLIC_API_URL
           ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`
-          : "https://api.185.245.183.209.nip.io/api/:path*",
+          : "http://api.169.58.4.78.nip.io:8081/api/:path*",
       },
     ];
   },
