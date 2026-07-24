@@ -284,6 +284,12 @@ class TarteelModel:
             skip_special_tokens=True
         )[0]
 
+        # Strip Whisper special tokens like <|ar|>, <|transcribe|>, <|notimestamps|>
+        import re
+        transcription = re.sub(r'<\|[^|]+\|>', '', transcription).strip()
+        # Remove leading/trailing quotes or spaces
+        transcription = transcription.strip('" \'')
+
         return {
             "text": transcription,
             "confidence": 0.9,

@@ -39,11 +39,13 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
 
   const { analysis: wsAnalysis, isConnected: wsConnected, sendAudioData, wsError } = useRecitationWebSocket();
 
-  // WebSocket → live analysis
+  // WebSocket → live transcript only (analysis shown after stop)
+  const lastWsAnalysisRef = useRef<any>(null);
   useEffect(() => {
     if (recogMode === "whisper" && wsAnalysis) {
+      lastWsAnalysisRef.current = wsAnalysis;
       if (wsAnalysis.transcription) setTranscript(wsAnalysis.transcription);
-      if (wsAnalysis.tajweed) setAnalysis(wsAnalysis);
+      // Analysis is NOT set here — only on stop
     }
   }, [wsAnalysis, recogMode]);
 
@@ -102,7 +104,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
     })();
   }, [surahNumber]);
 
-  // REST transcribe
+  // REST transcribe + analyze
   const transcribeViaRest = async (blob: Blob) => {
     try {
       const b64 = await blobToWavBase64(blob);
@@ -111,8 +113,22 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
         body: JSON.stringify({ audio: b64, surah_number: surahNumber, ayah_number: 1 }),
       });
       const data = await res.json();
-      if (data.text) { setTranscript(data.text); accumulatedTranscriptRef.current = data.text; }
-      else setError("Transcription empty. Try again.");
+      if (data.text) {
+        const text = data.text;
+        setTranscript(text);
+        accumulatedTranscriptRef.current = text;
+
+        // Also trigger Tajweed analysis
+        const expectedText = displayAyahs.map((a) => a.text).join(" ").replace(/\s+/g, " ");
+        const ar = await apiFetch("/api/quran/analyze-recitation", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcript: text, expected_text: expectedText, surah_number: surahNumber, ayahs: displayAyahs }),
+        });
+        const ad = await ar.json();
+        if (ad.score != null) setAnalysis({ tajweed: ad, transcription: text, expected: expectedText, surahNumber, ayahNumber: 1 });
+      } else {
+        setError("Transcription empty. Try again.");
+      }
     } catch { setError("Transcription failed."); }
   };
 
@@ -150,7 +166,12 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
         setStream(null);
         setIsListening(false);
 
-        if (wsFallbackActive || !wsAnalysis?.transcription) {
+        // Show analysis from last WebSocket result (if available)
+        const lastWS = lastWsAnalysisRef.current;
+        if (!wsFallbackActive && lastWS?.tajweed) {
+          setAnalysis(lastWS);
+        } else {
+          // REST fallback for transcription
           const blob = new Blob(audioChunksRef.current, { type: mime });
           await transcribeViaRest(blob);
         }
