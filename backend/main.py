@@ -1,14 +1,18 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import uvicorn
 import json
 import base64
-from typing import List
+from typing import List, Optional
 from models.tarteel_model import TarteelModel
 from services.tajweed_analyzer import TajweedAnalyzer
 from services.quran_service import QuranService
+from services.makharij_service import MakharijService, MAKHAARIJ_SERVICE
+from services.progress_service import ProgressService, PROGRESS_SERVICE
+from services.curriculum_service import CurriculumService, CURRICULUM_SERVICE
+from services.waqf_service import WaqfService, WAQF_SERVICE
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -27,6 +31,11 @@ app.add_middleware(
 tarteel_model = TarteelModel()
 tajweed_analyzer = TajweedAnalyzer()
 quran_service = QuranService()
+makharij_service = MAKHAARIJ_SERVICE
+progress_service = PROGRESS_SERVICE
+curriculum_service = CURRICULUM_SERVICE
+curriculum_service.set_progress_service(progress_service)
+waqf_service = WAQF_SERVICE
 
 class ConnectionManager:
     def __init__(self):
@@ -55,20 +64,7 @@ async def root():
             "surahs": "/api/quran/surahs",
             "surah": "/api/quran/surah/{surah_number}",
             "ayah": "/api/quran/ayah/{surah_number}/{ayah_number}",
-            "websocket": "ws://localhost:8081/ws/recitation"
-        }
-    }
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for monitoring"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-        "services": {
-            "quran_service": "operational",
-            "tarteel_model": "operational",
-            "tajweed_analyzer": "operational"
+            "websocket": "{host}/ws/recitation"
         }
     }
 
@@ -167,11 +163,12 @@ async def websocket_recitation(websocket: WebSocket):
                         }, websocket)
                         continue
 
-                    # Analyze tajweed
+                    # Analyze tajweed with token-level confidence
                     tajweed_analysis = tajweed_analyzer.analyze(
-                        transcription.get("text", ""),
-                        expected_text,
-                        transcription.get("phonemes", [])
+                        transcribed_text=transcription.get("text", ""),
+                        expected_text=expected_text,
+                        phonemes=transcription.get("phonemes", []),
+                        token_confidences=transcription.get("token_confidences")
                     )
 
                     # Send response back to client
@@ -476,64 +473,23 @@ async def analyze_recitation(request: AnalyzeRecitationRequest):
 
         print(f"Accuracy: {accuracy * 100:.1f}%")
 
-        # Find errors by comparing word by word
-        expected_words = expected_norm.split()
-        transcript_words = transcript_norm.split()
+        # Use full Tajweed analysis instead of simple word comparison
+        tajweed_analysis = tajweed_analyzer.analyze(
+            transcribed_text=transcript,
+            expected_text=expected_text
+        )
 
-        errors = []
-        error_types = {"omission": 0, "substitution": 0, "insertion": 0}
-
-        # Simple word-by-word comparison
-        i, j = 0, 0
-        while i < len(expected_words) or j < len(transcript_words):
-            if i >= len(expected_words):
-                # Extra words (insertion)
-                errors.append({
-                    "type": "insertion",
-                    "expected": "",
-                    "actual": transcript_words[j] if j < len(transcript_words) else "",
-                    "word": transcript_words[j] if j < len(transcript_words) else "",
-                    "ayah_number": None
-                })
-                j += 1
-                error_types["insertion"] += 1
-            elif j >= len(transcript_words):
-                # Missing words (omission)
-                errors.append({
-                    "type": "omission",
-                    "expected": expected_words[i],
-                    "actual": "",
-                    "word": expected_words[i],
-                    "ayah_number": None
-                })
-                i += 1
-                error_types["omission"] += 1
-            elif expected_words[i] != transcript_words[j]:
-                # Different words (substitution)
-                errors.append({
-                    "type": "substitution",
-                    "expected": expected_words[i],
-                    "actual": transcript_words[j],
-                    "word": transcript_words[j],
-                    "ayah_number": None
-                })
-                i += 1
-                j += 1
-                error_types["substitution"] += 1
-            else:
-                # Match
-                i += 1
-                j += 1
-
-        print(f"✅ Found {len(errors)} errors")
+        print(f"✅ Analysis complete — Score: {tajweed_analysis['score']}")
 
         return {
-            "accuracy": accuracy,
+            "accuracy": tajweed_analysis["accuracy"],
             "transcript": transcript,
             "expected": expected_text,
-            "errors": errors[:10],  # Limit to 10 errors to avoid clutter
-            "error_count": len(errors),
-            "error_summary": error_types,
+            "errors": tajweed_analysis["errors"][:10],
+            "tajweed_rules": tajweed_analysis["tajweed_rules"],
+            "feedback": tajweed_analysis["feedback"],
+            "corrections": tajweed_analysis["corrections"],
+            "error_count": len(tajweed_analysis["errors"]),
             "surah_number": surah_number
         }
 
@@ -542,6 +498,163 @@ async def analyze_recitation(request: AnalyzeRecitationRequest):
         import traceback
         traceback.print_exc()
         return {"error": str(e)}
+
+# ── Makharij Endpoints ─────────────────────────────────────────────
+
+@app.get("/api/tajweed/makhraj/{letter}")
+async def get_makhraj(letter: str):
+    """Get makhraj (articulation point) for an Arabic letter"""
+    try:
+        makhraj = makharij_service.get_makhraj(letter)
+        sifat = makharij_service.get_sifat(letter)
+        return {"letter": letter, "makhraj": makhraj, "sifat": sifat}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/tajweed/compare-makhraj")
+async def compare_makhraj(expected_letter: str, actual_letter: str):
+    """Compare makhraj of expected vs actual letter"""
+    try:
+        result = makharij_service.compare_makharij(expected_letter, actual_letter)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Progress Endpoints ─────────────────────────────────────────────
+
+class RecitationSaveRequest(BaseModel):
+    surah_number: int
+    ayah_number: int
+    analysis: dict
+    user_id: str = "default"
+
+@app.post("/api/progress/save")
+async def save_recitation(request: RecitationSaveRequest):
+    """Save a recitation result and update progress"""
+    try:
+        progress_service.save_recitation(
+            surah=request.surah_number,
+            ayah=request.ayah_number,
+            analysis=request.analysis,
+            user_id=request.user_id,
+        )
+        return {"status": "saved"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/progress/weakness-profile")
+async def get_weakness_profile(user_id: str = "default"):
+    """Get user's Tajweed weakness profile"""
+    try:
+        profile = progress_service.get_weakness_profile(user_id)
+        return {"profile": profile}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/progress/trend")
+async def get_accuracy_trend(days: int = 30, user_id: str = "default"):
+    """Get accuracy trend over time"""
+    try:
+        trend = progress_service.get_accuracy_trend(days, user_id)
+        return {"trend": trend}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/progress/recent")
+async def get_recent_activity(limit: int = 20, user_id: str = "default"):
+    """Get recent recitation activity"""
+    try:
+        activity = progress_service.get_recent_activity(limit, user_id)
+        return {"activity": activity}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/progress/surahs")
+async def get_surah_progress(user_id: str = "default"):
+    """Get progress per surah"""
+    try:
+        surahs = progress_service.get_surah_progress(user_id)
+        return {"surahs": surahs}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Curriculum Endpoints ───────────────────────────────────────────
+
+@app.get("/api/curriculum/tiers")
+async def get_all_tiers():
+    """Get all curriculum tiers"""
+    return {"tiers": curriculum_service.get_all_tiers()}
+
+@app.get("/api/curriculum/current")
+async def get_current_tier(user_id: str = "default"):
+    """Get user's current curriculum tier"""
+    try:
+        tier = curriculum_service.get_current_tier(user_id)
+        return tier
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/curriculum/unlock-progress")
+async def get_unlock_progress(user_id: str = "default", target_tier: int = 1):
+    """Get progress towards unlocking a tier"""
+    try:
+        progress = curriculum_service.check_unlock_progress(user_id, target_tier)
+        return progress
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/curriculum/recommend")
+async def get_recommended(user_id: str = "default"):
+    """Get recommended next ayah to practice"""
+    try:
+        rec = curriculum_service.get_recommended_next_ayah(user_id)
+        return rec
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Waqf Endpoints ─────────────────────────────────────────────────
+
+@app.get("/api/waqf/marks")
+async def get_all_waqf_marks():
+    """Get all waqf (stop) marks"""
+    return {"marks": waqf_service.get_all_marks()}
+
+@app.get("/api/waqf/analyze")
+async def analyze_waqf(ayah_text: str):
+    """Analyze waqf marks in ayah text"""
+    try:
+        marks = waqf_service.suggest_waqf_points(ayah_text)
+        return {"marks": marks}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/waqf/evaluate")
+async def evaluate_stop(ayah_text: str, position: int):
+    """Evaluate whether a stop at given position is valid"""
+    try:
+        result = waqf_service.evaluate_stop(ayah_text, position)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Health check updated ───────────────────────────────────────────
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "services": {
+            "quran_service": "operational",
+            "tarteel_model": "operational",
+            "tajweed_analyzer": "operational",
+            "makharij_service": "operational",
+            "progress_service": "operational",
+            "curriculum_service": "operational",
+            "waqf_service": "operational",
+        }
+    }
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8081, reload=True)

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import Link from "next/link";
-import FullSurahRecitation from "@/components/FullSurahRecitation";
+import FullSurahRecitation from "@/components/FullSurahRecitationRefactored";
 
 interface SurahInfo {
   number: number;
