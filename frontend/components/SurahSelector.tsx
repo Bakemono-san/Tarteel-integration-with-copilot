@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ChevronDown, Play, BookOpen, Star } from "lucide-react";
+import { apiFetch } from "@/lib/utils";
 
 interface SurahInfo {
   number: number;
@@ -38,7 +39,7 @@ export default function SurahSelector({
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/quran/surahs");
+        const res = await apiFetch("/api/quran/surahs");
         const data = await res.json();
         if (data.surahs) setSurahs(data.surahs);
       } catch {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Award, TrendingUp, BookOpen, AlertTriangle, Star, Loader } from "lucide-react";
+import { apiFetch } from "@/lib/utils";
 
 interface Weakness {
   rule: string;
@@ -40,10 +41,10 @@ export default function ProgressDashboard() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/progress/weakness-profile").then(r => r.json()),
-      fetch("/api/progress/trend?days=30").then(r => r.json()),
-      fetch("/api/progress/surahs").then(r => r.json()),
-      fetch("/api/curriculum/current").then(r => r.json()),
+      apiFetch("/api/progress/weakness-profile").then(r => r.json()),
+      apiFetch("/api/progress/trend?days=30").then(r => r.json()),
+      apiFetch("/api/progress/surahs").then(r => r.json()),
+      apiFetch("/api/curriculum/current").then(r => r.json()),
     ])
       .then(([weakData, trendData, surahData, tierData]) => {
         setWeaknesses(weakData.profile || []);

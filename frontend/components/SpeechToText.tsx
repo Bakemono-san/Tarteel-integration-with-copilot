@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Mic, MicOff, Copy, Check } from "lucide-react";
+import { apiFetch } from "@/lib/utils";
 
 interface Props {
   onTranscriptionComplete?: (text: string) => void;
@@ -77,7 +78,7 @@ export default function SpeechToText({
     if (!text.trim()) return;
     setIsProcessing(true);
     try {
-      const res = await fetch("/api/speech/add-tashkeel", {
+      const res = await apiFetch("/api/speech/add-tashkeel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, context: "quran" }),

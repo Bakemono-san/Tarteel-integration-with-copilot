@@ -5,6 +5,7 @@ import { X, Mic, MicOff, Loader, Sparkles, AudioWaveform as Waveform, Wifi, Wifi
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useRecitationWebSocket } from "@/lib/useRecitationWebSocket";
+import { apiFetch } from "@/lib/utils";
 
 interface Ayah { number: number; text: string }
 
@@ -100,7 +101,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
     (async () => {
       try {
         setIsLoading(true);
-        const res = await fetch(`/api/quran/surah/${surahNumber}`);
+        const res = await apiFetch(`/api/quran/surah/${surahNumber}`);
         if (!res.ok) throw new Error();
         const data = await res.json();
         setSurahName(data.surah?.englishName || "");
@@ -121,7 +122,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
         reader.onloadend = () => resolve(reader.result?.toString().split(",")[1] || "");
         reader.readAsDataURL(blob);
       });
-      const res = await fetch("/api/transcribe", {
+      const res = await apiFetch("/api/transcribe", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ audio: b64, surah_number: surahNumber, ayah_number: 1 }),
       });
@@ -216,7 +217,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
     setIsAnalyzing(true);
     try {
       const expectedText = displayAyahs.map((a) => a.text).join(" ").replace(/\s+/g, " ");
-      const res = await fetch("/api/quran/analyze-recitation", {
+      const res = await apiFetch("/api/quran/analyze-recitation", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript: text, expected_text: expectedText, surah_number: surahNumber, ayahs: displayAyahs }),
       });

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import Link from "next/link";
 import FullSurahRecitation from "@/components/FullSurahRecitationRefactored";
+import { apiFetch } from "@/lib/utils";
 
 interface SurahInfo {
   number: number;
@@ -21,7 +22,7 @@ export default function ReciteSurahPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/quran/surahs");
+        const res = await apiFetch("/api/quran/surahs");
         const data = await res.json();
         if (data.surahs) setSurahs(data.surahs);
       } catch (e) {

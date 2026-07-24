@@ -6,6 +6,7 @@ import AyahDisplay from "./AyahDisplay";
 import FeedbackPanel from "./FeedbackPanel";
 import AudioVisualizer from "./AudioVisualizer";
 import { useRecitationWebSocket } from "@/lib/useRecitationWebSocket";
+import { apiFetch } from "@/lib/utils";
 
 interface Props {
   surahNumber: number;
@@ -41,7 +42,7 @@ export default function RecitationInterface({
 
   const fetchAyahData = async () => {
     try {
-      const res = await fetch(`/api/quran/ayah/${surahNumber}/${ayahNumber}`);
+      const res = await apiFetch(`/api/quran/ayah/${surahNumber}/${ayahNumber}`);
       const data = await res.json();
       setAyahText(data.text || "");
       setSurahName(data.surahEnglishName || "");
