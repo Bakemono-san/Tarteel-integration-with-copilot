@@ -39,22 +39,13 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
 
   const { analysis: wsAnalysis, isConnected: wsConnected, sendAudioData, wsError } = useRecitationWebSocket();
 
-  // WebSocket → live transcript only (analysis shown after stop)
-  const lastWsAnalysisRef = useRef<any>(null);
+  // WebSocket → live preview only (transcription updates in real-time)
+  // Final analysis always comes from REST on stop (full audio, no race condition)
   useEffect(() => {
-    if (recogMode === "whisper" && wsAnalysis) {
-      lastWsAnalysisRef.current = wsAnalysis;
-      if (wsAnalysis.transcription) setTranscript(wsAnalysis.transcription);
-      // Analysis is NOT set here — only on stop
+    if (recogMode === "whisper" && wsAnalysis?.transcription) {
+      setTranscript(wsAnalysis.transcription);
     }
   }, [wsAnalysis, recogMode]);
-
-  // WS fallback
-  useEffect(() => {
-    if (recogMode === "whisper" && !wsConnected && wsError && wsChunkCount.current >= 3) {
-      if (!wsFallbackActive) setWsFallbackActive(true);
-    }
-  }, [wsConnected, wsError, recogMode, wsFallbackActive]);
 
   // Browser STT init
   useEffect(() => {
@@ -166,19 +157,13 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
         setStream(null);
         setIsListening(false);
 
-        // Show analysis from last WebSocket result (if available)
-        const lastWS = lastWsAnalysisRef.current;
-        if (!wsFallbackActive && lastWS?.tajweed) {
-          setAnalysis(lastWS);
-        } else {
-          // REST fallback for transcription
-          const blob = new Blob(audioChunksRef.current, { type: mime });
-          await transcribeViaRest(blob);
-        }
+        // Always use REST for final transcription + analysis (full audio, no race condition)
+        const blob = new Blob(audioChunksRef.current, { type: mime });
+        await transcribeViaRest(blob);
       };
 
       mr.onerror = () => setError("Recording error.");
-      mr.start(2000);
+      mr.start(3000);
       setIsListening(true);
     } catch (err: any) {
       if (err.name === "NotAllowedError") setError("Microphone permission denied.");

@@ -25,11 +25,14 @@ export default function RecitationInterface({
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState("");
   const [audioLevel, setAudioLevel] = useState(0);
+  const [finalAnalysis, setFinalAnalysis] = useState<any>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number>(0);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const mimeTypeRef = useRef<string>("audio/webm");
 
   const { analysis, isConnected, sendAudioData, resetAnalysis } =
     useRecitationWebSocket();
@@ -95,36 +98,40 @@ export default function RecitationInterface({
         : MediaRecorder.isTypeSupported("audio/webm")
           ? "audio/webm"
           : "audio/ogg";
+      mimeTypeRef.current = mimeType;
 
       const mr = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mr;
+      audioChunksRef.current = [];
 
-      // Send each chunk as it arrives (streaming)
+      // Chunks → WebSocket for live preview, also accumulated for REST final
       mr.ondataavailable = async (e) => {
         if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+          // WebSocket for live preview
           const b64 = await blobToWavBase64(e.data);
           sendAudioData(b64, surahNumber, ayahNumber);
         }
       };
 
-      mr.onstop = () => {
+      mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         setMediaStream(null);
         setAudioLevel(0);
-        if (audioContextRef.current) {
-          audioContextRef.current.close();
-        }
-        if (animFrameRef.current) {
-          cancelAnimationFrame(animFrameRef.current);
-        }
+        if (audioContextRef.current) audioContextRef.current.close();
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+        setIsRecording(false);
+
+        // REST final: send accumulated audio for accurate transcription + analysis
+        const fullBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        await transcribeFullAudio(fullBlob, mimeType);
       };
 
       mr.onerror = () => {
         setError("Recording error. Please try again.");
       };
 
-      // Stream chunks every 2 seconds
-      mr.start(2000);
+      mr.start(3000);
       setIsRecording(true);
       resetAnalysis();
     } catch (err: any) {
@@ -143,6 +150,41 @@ export default function RecitationInterface({
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
+  };
+
+  // REST transcribe + analyze for accurate final result
+  const transcribeFullAudio = async (blob: Blob, mime: string) => {
+    try {
+      const b64 = await blobToWavBase64(blob);
+      const res = await apiFetch("/api/transcribe", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audio: b64, surah_number: surahNumber, ayah_number: ayahNumber }),
+      });
+      const data = await res.json();
+      if (!data.text) return;
+
+      const ar = await apiFetch("/api/quran/analyze-recitation", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript: data.text,
+          expected_text: ayahText,
+          surah_number: surahNumber,
+          ayahs: [{ number: ayahNumber, text: ayahText }],
+        }),
+      });
+      const ad = await ar.json();
+      if (ad.score != null) {
+        setFinalAnalysis({
+          type: "analysis",
+          transcription: data.text,
+          confidence: data.confidence || 0.9,
+          tajweed: ad,
+          expected: ayahText,
+          surahNumber,
+          ayahNumber,
+        });
+      }
+    } catch { /* silent */ }
   };
 
   return (
@@ -243,7 +285,7 @@ export default function RecitationInterface({
         </div>
 
         {/* Right — feedback */}
-        <FeedbackPanel analysis={analysis} expectedText={ayahText} />
+        <FeedbackPanel analysis={finalAnalysis || analysis} expectedText={ayahText} />
       </div>
     </div>
   );
