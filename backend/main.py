@@ -1,11 +1,21 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import uvicorn
 import json
 import base64
+import logging
+import time
 from typing import List, Optional
+
+# ── Logging ─────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("tarteel")
 from models.tarteel_model import TarteelModel
 from services.tajweed_analyzer import TajweedAnalyzer
 from services.quran_service import QuranService
@@ -26,6 +36,34 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Request Logging Middleware ──────────────────────
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.time()
+    body = None
+    if request.method in ("POST", "PUT", "PATCH"):
+        try:
+            body_bytes = await request.body()
+            body_str = body_bytes.decode("utf-8", errors="replace")
+            body = body_str[:500]
+        except Exception:
+            body = "<unreadable>"
+
+    response = await call_next(request)
+    duration = time.time() - start
+
+    log_parts = [
+        f"{request.method} {request.url.path}",
+        f"→ {response.status_code}",
+        f"({duration*1000:.0f}ms)",
+    ]
+    if body:
+        log_parts.append(f"body={body}")
+
+    logger.info(" ".join(log_parts))
+    return response
 
 # Initialize services
 tarteel_model = TarteelModel()
@@ -108,7 +146,7 @@ async def get_quran_audio(surah_number: int, ayah_number: int, reciter: str = "a
         else:
             return {"error": f"Failed to fetch audio: {response.status_code}"}
     except Exception as e:
-        print(f"❌ Audio proxy error: {e}")
+        logger.error(f"AUDIO PROXY  surah={surah_number}:{ayah_number} error={e}")
         return {"error": str(e)}
 
 # Per-client audio buffer for streaming chunks
@@ -123,7 +161,8 @@ async def websocket_recitation(websocket: WebSocket):
     await manager.connect(websocket)
     client_id = id(websocket)
     client_key = get_client_key(websocket)
-    print(f"✅ Client {client_id} connected to recitation WebSocket")
+    client_ip = websocket.client.host if websocket.client else "unknown"
+    logger.info(f"WS CONNECT  client={client_id} ip={client_ip}")
 
     client_audio_buffers[client_key] = {
         "buffer": b"",
@@ -160,7 +199,7 @@ async def websocket_recitation(websocket: WebSocket):
                     buf["chunk_count"] += 1
                     chunk = buf["chunk_count"]
 
-                    print(f"🎤 Chunk #{chunk} for Surah {surah_num}:{ayah_num} (Client {client_id}) — buffer: {len(buf['buffer'])} bytes")
+                    logger.info(f"WS CHUNK    client={client_id} surah={surah_num}:{ayah_num} chunk={chunk} buffer={len(buf['buffer'])}B")
 
                     is_partial = chunk < 4
 
@@ -199,13 +238,10 @@ async def websocket_recitation(websocket: WebSocket):
                     }
 
                     await manager.send_message(response, websocket)
-                    status = "partial" if is_partial else "final"
-                    print(f"✅ {status} analysis sent (Score: {tajweed_analysis.get('score', 0)}, Chunk #{chunk})")
+                    logger.info(f"WS SEND      client={client_id} part={is_partial} chunk={chunk} score={tajweed_analysis.get('score', 0)} model={transcription.get('model','?')}")
 
                 except Exception as e:
-                    print(f"❌ Error processing chunk: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
+                    logger.error(f"WS ERROR     client={client_id} chunk={chunk} err={e}")
 
             elif message["type"] == "ping":
                 await manager.send_message({"type": "pong"}, websocket)
@@ -215,16 +251,14 @@ async def websocket_recitation(websocket: WebSocket):
                 if client_key_reset in client_audio_buffers:
                     client_audio_buffers[client_key_reset]["buffer"] = b""
                     client_audio_buffers[client_key_reset]["chunk_count"] = 0
-                print(f"🔄 Client {client_id} reset buffer")
+                logger.info(f"WS RESET     client={client_id}")
 
     except WebSocketDisconnect:
         client_audio_buffers.pop(client_key, None)
         manager.disconnect(websocket)
-        print(f"🔌 Client {client_id} disconnected from recitation WebSocket")
+        logger.info(f"WS DISCONNECT client={client_id}")
     except Exception as e:
-        print(f"❌ WebSocket error for client {client_id}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"WS ERROR     client={client_id} err={e}")
         client_audio_buffers.pop(client_key, None)
         try:
             manager.disconnect(websocket)
@@ -253,16 +287,14 @@ async def add_tashkeel_to_speech(request: TashkeelRequest):
         # Normalize the text (remove hamza variations, etc.)
         normalized_text = normalize_arabic_text(text)
 
-        print(f"🔍 Searching for: {text[:100]}...")
+        logger.info(f"TASHKEEL     text=\"{text[:80]}...\"")
 
-        # Try to find sequential ayahs
         best_sequence = find_ayah_sequence(normalized_text)
 
         if best_sequence and best_sequence["confidence"] > 0.6:
-            # Found a good sequence of ayahs
             full_text_with_tashkeel = " ".join([ayah["text"] for ayah in best_sequence["ayahs"]])
 
-            print(f"✅ Found {len(best_sequence['ayahs'])} ayahs from Surah {best_sequence['surah']}")
+            logger.info(f"TASHKEEL     matched surah={best_sequence['surah']} ayahs={len(best_sequence['ayahs'])} conf={best_sequence['confidence']:.2f}")
 
             return {
                 "original": text,
@@ -477,28 +509,14 @@ async def analyze_recitation(request: AnalyzeRecitationRequest):
         if not transcript or not expected_text:
             return {"error": "Missing transcript or expected text"}
 
-        print(f"🔍 Analyzing recitation for Surah {surah_number}")
-        print(f"Expected: {expected_text[:100]}...")
-        print(f"Got: {transcript[:100]}...")
+        logger.info(f"ANALYZE      surah={surah_number} expected_len={len(expected_text)} transcript_len={len(transcript)}")
 
-        # Normalize both texts
-        expected_norm = normalize_arabic_text(expected_text)
-        transcript_norm = normalize_arabic_text(transcript)
-
-        # Calculate similarity
-        from difflib import SequenceMatcher
-        similarity = SequenceMatcher(None, expected_norm, transcript_norm).ratio()
-        accuracy = max(0, min(1, similarity))
-
-        print(f"Accuracy: {accuracy * 100:.1f}%")
-
-        # Use full Tajweed analysis instead of simple word comparison
         tajweed_analysis = tajweed_analyzer.analyze(
             transcribed_text=transcript,
             expected_text=expected_text
         )
 
-        print(f"✅ Analysis complete — Score: {tajweed_analysis['score']}")
+        logger.info(f"ANALYZE      score={tajweed_analysis['score']} errors={tajweed_analysis.get('error_count', len(tajweed_analysis['errors']))} rules={len(tajweed_analysis['tajweed_rules'])}")
 
         return {
             "accuracy": tajweed_analysis["accuracy"],
@@ -514,9 +532,7 @@ async def analyze_recitation(request: AnalyzeRecitationRequest):
         }
 
     except Exception as e:
-        print(f"❌ Analysis error: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"ANALYZE      error={e}")
         return {"error": str(e)}
 
 # ── REST Transcription Endpoint (fallback when WebSocket unavailable) ──
@@ -535,9 +551,11 @@ async def transcribe_audio_rest(request: TranscriptionRequest):
         if not audio_bytes:
             return {"error": "Empty audio"}
         transcription = await tarteel_model.transcribe_audio(audio_bytes)
+        model = transcription.get("model", "unknown")
+        logger.info(f"TRANSCRIBE   surah={request.surah_number}:{request.ayah_number} model={model} text_len={len(transcription.get('text',''))}")
         return transcription
     except Exception as e:
-        print(f"❌ REST transcription error: {e}")
+        logger.error(f"TRANSCRIBE   error={e}")
         return {"error": str(e), "text": ""}
 
 # ── Makharij Endpoints ─────────────────────────────────────────────
