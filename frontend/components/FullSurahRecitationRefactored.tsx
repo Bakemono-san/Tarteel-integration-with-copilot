@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Mic, MicOff, Loader, Sparkles, AudioWaveform as Waveform, Wifi, WifiOff } from "lucide-react";
+import { Mic, MicOff, Loader, Sparkles, AudioWaveform as Waveform, Wifi, WifiOff, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRecitationWebSocket } from "@/lib/useRecitationWebSocket";
 import { apiFetch, blobToWavBase64 } from "@/lib/utils";
@@ -27,7 +27,10 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
   const [recogMode, setRecogMode] = useState<RecogMode>("whisper");
   const [wsFallbackActive, setWsFallbackActive] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [recordedUrl, setRecordedUrl] = useState("");
+  const [isPlayingRecording, setIsPlayingRecording] = useState(false);
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -157,9 +160,14 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
         setStream(null);
         setIsListening(false);
 
-        // Always use REST for final transcription + analysis (full audio, no race condition)
-        const blob = new Blob(audioChunksRef.current, { type: mime });
-        await transcribeViaRest(blob);
+        // Create blob URL for playback
+        if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+        const fullBlob = new Blob(audioChunksRef.current, { type: mime });
+        setRecordedUrl(URL.createObjectURL(fullBlob));
+        setIsPlayingRecording(false);
+
+        // REST for accurate transcription + analysis
+        await transcribeViaRest(fullBlob);
       };
 
       mr.onerror = () => setError("Recording error.");
@@ -291,8 +299,31 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
               </button>
 
               <p className="mt-2 text-xs text-gray-500">
-                {isListening ? "Tap to stop" : !wsConnected && recogMode === "whisper" && !wsFallbackActive ? "Connecting..." : "Tap to start"}
+                {isListening ? "Tap to stop" : !wsConnected && recogMode === "whisper" && !wsFallbackActive ? "Connecting..." : recordedUrl ? "Complete" : "Tap to start"}
               </p>
+
+              {/* Playback button */}
+              {recordedUrl && !isListening && (
+                <div className="mt-3">
+                  <audio ref={audioRef} src={recordedUrl} onEnded={() => setIsPlayingRecording(false)} className="hidden" />
+                  <button
+                    onClick={() => {
+                      if (isPlayingRecording) {
+                        audioRef.current?.pause();
+                        audioRef.current!.currentTime = 0;
+                        setIsPlayingRecording(false);
+                      } else {
+                        audioRef.current?.play();
+                        setIsPlayingRecording(true);
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-2 text-xs font-bold text-white shadow-md transition-all hover:shadow-lg hover:scale-105 active:scale-95"
+                  >
+                    {isPlayingRecording ? <Square className="h-3.5 w-3.5 fill-white" /> : <Play className="h-3.5 w-3.5 fill-white" />}
+                    {isPlayingRecording ? "Stop" : "Listen to my recitation"}
+                  </button>
+                </div>
+              )}
 
               {/* Live transcript inside recording card */}
               {transcript && (

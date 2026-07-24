@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowLeft, Mic, MicOff, Loader, AlertCircle } from "lucide-react";
+import { ArrowLeft, Mic, MicOff, Loader, AlertCircle, Play, Square } from "lucide-react";
 import AyahDisplay from "./AyahDisplay";
 import FeedbackPanel from "./FeedbackPanel";
 import AudioVisualizer from "./AudioVisualizer";
@@ -26,8 +26,11 @@ export default function RecitationInterface({
   const [error, setError] = useState("");
   const [audioLevel, setAudioLevel] = useState(0);
   const [finalAnalysis, setFinalAnalysis] = useState<any>(null);
+  const [recordedUrl, setRecordedUrl] = useState<string>("");
+  const [isPlayingRecording, setIsPlayingRecording] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number>(0);
@@ -122,8 +125,14 @@ export default function RecitationInterface({
         if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
         setIsRecording(false);
 
-        // REST final: send accumulated audio for accurate transcription + analysis
+        // Revoke previous recording URL
+        if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+        // Create blob URL for playback
         const fullBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        setRecordedUrl(URL.createObjectURL(fullBlob));
+        setIsPlayingRecording(false);
+
+        // REST final: accurate transcription + analysis
         await transcribeFullAudio(fullBlob, mimeType);
       };
 
@@ -273,8 +282,42 @@ export default function RecitationInterface({
                 ? "Tap to stop"
                 : !isConnected
                   ? "Connecting to server..."
-                  : "Tap to start"}
+                  : recordedUrl
+                    ? "Recitation complete"
+                    : "Tap to start"}
             </p>
+
+            {/* Playback button */}
+            {recordedUrl && !isRecording && (
+              <div className="mt-4">
+                <audio
+                  ref={audioRef}
+                  src={recordedUrl}
+                  onEnded={() => setIsPlayingRecording(false)}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => {
+                    if (isPlayingRecording) {
+                      audioRef.current?.pause();
+                      audioRef.current!.currentTime = 0;
+                      setIsPlayingRecording(false);
+                    } else {
+                      audioRef.current?.play();
+                      setIsPlayingRecording(true);
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:shadow-lg hover:scale-105 active:scale-95"
+                >
+                  {isPlayingRecording ? (
+                    <Square className="h-4 w-4 fill-white" />
+                  ) : (
+                    <Play className="h-4 w-4 fill-white" />
+                  )}
+                  {isPlayingRecording ? "Stop" : "Play my recitation"}
+                </button>
+              </div>
+            )}
 
             {analysis?.partial && (
               <p className="mt-2 text-xs text-amber-600">
