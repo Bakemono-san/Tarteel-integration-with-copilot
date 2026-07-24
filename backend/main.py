@@ -56,7 +56,7 @@ manager = ConnectionManager()
 @app.get("/")
 async def root():
     return {
-        "message": "Quran Recitation API with Tarteel AI",
+        "message": "Quran Recitation API with Bakemono AI",
         "version": "2.0.0",
         "endpoints": {
             "docs": "/docs",
@@ -111,59 +111,73 @@ async def get_quran_audio(surah_number: int, ayah_number: int, reciter: str = "a
         print(f"❌ Audio proxy error: {e}")
         return {"error": str(e)}
 
+# Per-client audio buffer for streaming chunks
+client_audio_buffers: dict = {}
+
+def get_client_key(websocket) -> int:
+    return id(websocket)
+
 @app.websocket("/ws/recitation")
 async def websocket_recitation(websocket: WebSocket):
-    """WebSocket endpoint for real-time recitation analysis"""
+    """WebSocket endpoint for real-time recitation analysis with chunked streaming"""
     await manager.connect(websocket)
     client_id = id(websocket)
+    client_key = get_client_key(websocket)
     print(f"✅ Client {client_id} connected to recitation WebSocket")
+
+    client_audio_buffers[client_key] = {
+        "buffer": b"",
+        "current_surah": None,
+        "current_ayah": None,
+        "chunk_count": 0,
+    }
 
     try:
         while True:
-            # Receive audio data from client
             data = await websocket.receive_text()
             message = json.loads(data)
 
             if message["type"] == "audio":
                 try:
-                    # Decode base64 audio
                     audio_data = base64.b64decode(message["audio"])
-
                     if len(audio_data) == 0:
-                        await manager.send_message({
-                            "type": "error",
-                            "message": "Empty audio data received"
-                        }, websocket)
                         continue
 
-                    # Get context (surah and ayah being recited)
                     surah_num = message.get("surahNumber", 1)
                     ayah_num = message.get("ayahNumber", 1)
 
-                    print(f"🎤 Processing audio for Surah {surah_num}, Ayah {ayah_num} (Client {client_id})")
+                    buf = client_audio_buffers[client_key]
 
-                    # Process audio through Tarteel model
-                    transcription = await tarteel_model.transcribe_audio(audio_data)
+                    # Reset buffer if new ayah
+                    if buf["current_surah"] != surah_num or buf["current_ayah"] != ayah_num:
+                        buf["buffer"] = b""
+                        buf["current_surah"] = surah_num
+                        buf["current_ayah"] = ayah_num
+                        buf["chunk_count"] = 0
 
-                    # Check for transcription errors
+                    # Append to buffer
+                    buf["buffer"] += audio_data
+                    buf["chunk_count"] += 1
+                    chunk = buf["chunk_count"]
+
+                    print(f"🎤 Chunk #{chunk} for Surah {surah_num}:{ayah_num} (Client {client_id}) — buffer: {len(buf['buffer'])} bytes")
+
+                    is_partial = chunk < 4
+
+                    transcription = await tarteel_model.transcribe_audio(buf["buffer"])
+
                     if "error" in transcription:
-                        await manager.send_message({
-                            "type": "error",
-                            "message": f"Transcription error: {transcription['error']}"
-                        }, websocket)
                         continue
 
-                    # Get expected ayah text
                     expected_text = quran_service.get_ayah_text(surah_num, ayah_num)
 
                     if not expected_text:
                         await manager.send_message({
                             "type": "error",
-                            "message": f"Ayah {surah_num}:{ayah_num} not found in database"
+                            "message": f"Ayah {surah_num}:{ayah_num} not found"
                         }, websocket)
                         continue
 
-                    # Analyze tajweed with token-level confidence
                     tajweed_analysis = tajweed_analyzer.analyze(
                         transcribed_text=transcription.get("text", ""),
                         expected_text=expected_text,
@@ -171,7 +185,6 @@ async def websocket_recitation(websocket: WebSocket):
                         token_confidences=transcription.get("token_confidences")
                     )
 
-                    # Send response back to client
                     response = {
                         "type": "analysis",
                         "transcription": transcription.get("text", ""),
@@ -181,32 +194,38 @@ async def websocket_recitation(websocket: WebSocket):
                         "surahNumber": surah_num,
                         "ayahNumber": ayah_num,
                         "model": transcription.get("model", "unknown"),
-                        "timestamp": message.get("timestamp", "")
+                        "partial": is_partial,
+                        "timestamp": message.get("timestamp", ""),
                     }
 
                     await manager.send_message(response, websocket)
-                    print(f"✅ Analysis sent (Score: {tajweed_analysis.get('score', 0)})")
+                    status = "partial" if is_partial else "final"
+                    print(f"✅ {status} analysis sent (Score: {tajweed_analysis.get('score', 0)}, Chunk #{chunk})")
 
                 except Exception as e:
-                    print(f"❌ Error processing audio: {str(e)}")
+                    print(f"❌ Error processing chunk: {str(e)}")
                     import traceback
                     traceback.print_exc()
-
-                    await manager.send_message({
-                        "type": "error",
-                        "message": f"Error processing audio: {str(e)}"
-                    }, websocket)
 
             elif message["type"] == "ping":
                 await manager.send_message({"type": "pong"}, websocket)
 
+            elif message["type"] == "reset":
+                client_key_reset = get_client_key(websocket)
+                if client_key_reset in client_audio_buffers:
+                    client_audio_buffers[client_key_reset]["buffer"] = b""
+                    client_audio_buffers[client_key_reset]["chunk_count"] = 0
+                print(f"🔄 Client {client_id} reset buffer")
+
     except WebSocketDisconnect:
+        client_audio_buffers.pop(client_key, None)
         manager.disconnect(websocket)
         print(f"🔌 Client {client_id} disconnected from recitation WebSocket")
     except Exception as e:
         print(f"❌ WebSocket error for client {client_id}: {str(e)}")
         import traceback
         traceback.print_exc()
+        client_audio_buffers.pop(client_key, None)
         try:
             manager.disconnect(websocket)
         except:
@@ -483,6 +502,7 @@ async def analyze_recitation(request: AnalyzeRecitationRequest):
 
         return {
             "accuracy": tajweed_analysis["accuracy"],
+            "score": tajweed_analysis["score"],
             "transcript": transcript,
             "expected": expected_text,
             "errors": tajweed_analysis["errors"][:10],

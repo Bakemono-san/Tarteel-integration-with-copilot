@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Tarteel - Quran Recitation App",
   description:
-    "Detect Quran recitation with real-time Tajweed correction using Tarteel AI",
+    "Master Quran recitation with real-time Tajweed correction using Bakemono AI",
 };
 
 export default function RootLayout({

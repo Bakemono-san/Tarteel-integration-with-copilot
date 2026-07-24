@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, Mic, TrendingUp, Volume2, GraduationCap, Brain, Languages, Star } from "lucide-react";
+import { BookOpen, Mic, TrendingUp, Volume2, GraduationCap, Brain, Languages, Star, Ear, Sparkles } from "lucide-react";
 
 export default function Home() {
   return (
@@ -16,24 +16,30 @@ export default function Home() {
             </span>
           </Link>
 
-          <nav className="flex items-center gap-1.5 sm:gap-2">
+          <nav className="flex items-center gap-1 sm:gap-1.5">
             <Link
               href="/recitation"
-              className="rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:shadow-md hover:scale-105 sm:px-4 sm:py-2 sm:text-sm"
+              className="rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:shadow-md hover:scale-105 sm:px-4 sm:py-2 sm:text-sm"
             >
-              Recite
+              🎤 Recite
             </Link>
             <Link
               href="/recite-surah"
-              className="rounded-full bg-gradient-to-r from-purple-600 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:shadow-md hover:scale-105 sm:px-4 sm:py-2 sm:text-sm"
+              className="rounded-full bg-gradient-to-r from-purple-600 to-purple-500 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:shadow-md hover:scale-105 sm:px-4 sm:py-2 sm:text-sm"
             >
-              Surah
+              📖 Surah
+            </Link>
+            <Link
+              href="/speech-to-text"
+              className="rounded-full bg-gradient-to-r from-sky-600 to-sky-500 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:shadow-md hover:scale-105 sm:px-4 sm:py-2 sm:text-sm"
+            >
+              🎙️ Ayah Detection
             </Link>
             <Link
               href="/progress"
-              className="rounded-full border-2 border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 hover:border-emerald-300 sm:px-4 sm:py-2 sm:text-sm"
+              className="rounded-full border-2 border-emerald-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-50 hover:border-emerald-300 sm:px-4 sm:py-2 sm:text-sm"
             >
-              <span className="hidden sm:inline">My </span>Progress
+              📊 <span className="hidden sm:inline">My </span>Progress
             </Link>
           </nav>
         </div>
@@ -48,7 +54,7 @@ export default function Home() {
         <div className="relative z-10">
           <span className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-100 to-emerald-50 border border-emerald-200/60 px-4 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm">
             <Star className="h-3.5 w-3.5 text-emerald-600" />
-            Powered by Tarteel AI & Whisper
+            Powered by Bakemono AI & Whisper
           </span>
 
           <h1 className="max-w-4xl text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-7xl text-balance">
@@ -70,18 +76,24 @@ export default function Home() {
             بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/recite-surah"
-              className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:shadow-xl hover:scale-105 active:scale-95 sm:text-base"
+              className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:shadow-xl hover:scale-105 active:scale-95 sm:text-base"
             >
               <Mic className="h-5 w-5" /> Start Reciting
             </Link>
             <Link
-              href="/progress"
-              className="inline-flex items-center gap-2.5 rounded-xl border-2 border-emerald-200 bg-white/80 px-8 py-3.5 text-sm font-bold text-emerald-700 shadow-sm transition-all hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md active:scale-95 sm:text-base"
+              href="/speech-to-text"
+              className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-sky-500 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-sky-600/25 transition-all hover:shadow-xl hover:scale-105 active:scale-95 sm:text-base"
             >
-              <TrendingUp className="h-5 w-5" /> View My Progress
+              <Ear className="h-5 w-5" /> Ayah Detection
+            </Link>
+            <Link
+              href="/progress"
+              className="inline-flex items-center gap-2.5 rounded-xl border-2 border-emerald-200 bg-white/80 px-7 py-3.5 text-sm font-bold text-emerald-700 shadow-sm transition-all hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md active:scale-95 sm:text-base"
+            >
+              <TrendingUp className="h-5 w-5" /> Progress
             </Link>
           </div>
         </div>
@@ -103,7 +115,7 @@ export default function Home() {
             {
               icon: <Mic className="h-6 w-6" />,
               title: "Real-time Recognition",
-              desc: "Advanced Arabic ASR using Tarteel-optimized Whisper models for accurate Quranic transcription.",
+              desc: "Advanced Arabic ASR using Bakemono-optimized Whisper models for accurate Quranic transcription.",
               color: "emerald",
               href: "/recitation",
             },
@@ -141,6 +153,20 @@ export default function Home() {
               desc: "Recite entire surahs and get verse-by-verse feedback with word-level error highlighting.",
               color: "teal",
               href: "/recite-surah",
+            },
+            {
+              icon: <Ear className="h-6 w-6" />,
+              title: "Ayah Detection",
+              desc: "Speak any surah and our AI will detect which ayahs you recited, add tashkeel, and show the exact verses.",
+              color: "sky",
+              href: "/speech-to-text",
+            },
+            {
+              icon: <Sparkles className="h-6 w-6" />,
+              title: "Teacher Recitation Mode",
+              desc: "Listen to professional recitation (Sheikh Al-Afasy), then record yourself — compare and improve verse by verse.",
+              color: "rose",
+              href: "/recitation",
             },
           ].map(({ icon, title, desc, color, href }) => (
             <Link key={title} href={href}>
@@ -230,18 +256,24 @@ export default function Home() {
               Join the journey of mastering Quran recitation with AI-powered
                   Tajweed analysis and personalized teaching.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 href="/recite-surah"
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-sm font-bold text-emerald-700 shadow-lg transition-all hover:shadow-xl hover:scale-105 active:scale-95 sm:text-base"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-bold text-emerald-700 shadow-lg transition-all hover:shadow-xl hover:scale-105 active:scale-95 sm:text-base"
               >
                 <Mic className="h-5 w-5" /> Start Learning
               </Link>
               <Link
-                href="/progress"
-                className="inline-flex items-center gap-2 rounded-xl border-2 border-white/30 px-8 py-3.5 text-sm font-bold text-white transition-all hover:bg-white/10 active:scale-95 sm:text-base"
+                href="/speech-to-text"
+                className="inline-flex items-center gap-2 rounded-xl bg-white/20 px-7 py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:bg-white/30 hover:scale-105 active:scale-95 sm:text-base backdrop-blur-sm"
               >
-                <TrendingUp className="h-5 w-5" /> See Progress
+                <Ear className="h-5 w-5" /> Ayah Detection
+              </Link>
+              <Link
+                href="/progress"
+                className="inline-flex items-center gap-2 rounded-xl border-2 border-white/30 px-7 py-3.5 text-sm font-bold text-white transition-all hover:bg-white/10 active:scale-95 sm:text-base"
+              >
+                <TrendingUp className="h-5 w-5" /> Progress
               </Link>
             </div>
           </div>
@@ -258,7 +290,7 @@ export default function Home() {
           </span>
         </p>
         <p className="mt-1 text-xs text-gray-400">
-          Powered by Tarteel AI · Whisper · FastAPI · Next.js · PyTorch
+          Powered by Bakemono AI · Whisper · FastAPI · Next.js · PyTorch
         </p>
       </footer>
     </main>

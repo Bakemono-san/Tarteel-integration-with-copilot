@@ -9,22 +9,21 @@ import os
 
 class TarteelModel:
     """
-    Wrapper for Tarteel AI's Arabic Quran Speech Recognition Model
-    Using Tarteel's fine-tuned models optimized for Quranic recitation
+    Wrapper for Bakemono AI's Arabic Quran Speech Recognition Model
+    Using fine-tuned models optimized for Quranic recitation
 
     Priority order:
-    1. Tarteel's Whisper models (best for Quran)
-    2. Tarteel's Wav2Vec2 models
+    1. Whisper models (best for Quran)
+    2. Wav2Vec2 models
     3. General Arabic ASR models
     4. OpenAI Whisper with Arabic
     """
 
     def __init__(self):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"🚀 Initializing Tarteel Model...")
+        print(f"🚀 Initializing Bakemono Model...")
         print(f"📱 Using device: {self.device}")
 
-        # Try to load Tarteel's models (multiple options)
         self.model_loaded = False
         self.model = None
         self.processor = None
@@ -34,11 +33,11 @@ class TarteelModel:
         self._load_model()
 
     def _load_model(self):
-        """Load the best available Tarteel/Arabic Quran ASR model"""
+        """Load the best available Arabic Quran ASR model"""
 
-        # Option 1: Try Tarteel's Whisper Tiny model (fastest, good accuracy)
+        # Option 1: Try Tiny Whisper model (fastest, good accuracy)
         try:
-            print("🔍 Loading Tarteel Whisper Tiny model...")
+            print("🔍 Loading Whisper Tiny model...")
             from transformers import WhisperProcessor, WhisperForConditionalGeneration
 
             model_name = "tarteel-ai/whisper-tiny-ar-quran"
@@ -50,11 +49,11 @@ class TarteelModel:
             print(f"✅ Successfully loaded {model_name}")
             return
         except Exception as e:
-            print(f"⚠️  Could not load Tarteel Whisper Tiny: {e}")
+            print(f"⚠️  Could not load Whisper Tiny: {e}")
 
-        # Option 2: Try Tarteel's Whisper Base model (better accuracy)
+        # Option 2: Try Whisper Base model (better accuracy)
         try:
-            print("🔍 Loading Tarteel Whisper Base model...")
+            print("🔍 Loading Whisper Base model...")
             from transformers import WhisperProcessor, WhisperForConditionalGeneration
 
             model_name = "tarteel-ai/whisper-base-ar-quran"
@@ -66,9 +65,9 @@ class TarteelModel:
             print(f"✅ Successfully loaded {model_name}")
             return
         except Exception as e:
-            print(f"⚠️  Could not load Tarteel Whisper Base: {e}")
+            print(f"⚠️  Could not load Whisper Base: {e}")
 
-        # Option 3: Try Tarteel's Wav2Vec2 model
+        # Option 3: Try Tarteel Wav2Vec2 model
         try:
             print("🔍 Loading Tarteel Wav2Vec2 model...")
             model_name = "Tarteel/wav2vec2-large-xlsr-53-quran"

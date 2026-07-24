@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, Play } from "lucide-react";
+import { ChevronDown, Play, BookOpen, Star } from "lucide-react";
 
 interface SurahInfo {
   number: number;
@@ -18,6 +18,11 @@ interface Props {
   onStart: () => void;
 }
 
+const REVELATION_ICONS: Record<string, string> = {
+  Meccan: "🕋",
+  Medinan: "🕌",
+};
+
 export default function SurahSelector({
   selectedSurah,
   selectedAyah,
@@ -27,6 +32,7 @@ export default function SurahSelector({
 }: Props) {
   const [surahs, setSurahs] = useState<SurahInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
   const current = surahs.find((s) => s.number === selectedSurah);
 
   useEffect(() => {
@@ -37,20 +43,8 @@ export default function SurahSelector({
         if (data.surahs) setSurahs(data.surahs);
       } catch {
         setSurahs([
-          {
-            number: 1,
-            name: "الفاتحة",
-            englishName: "Al-Fatihah",
-            englishNameTranslation: "The Opening",
-            numberOfAyahs: 7,
-          },
-          {
-            number: 2,
-            name: "البقرة",
-            englishName: "Al-Baqarah",
-            englishNameTranslation: "The Cow",
-            numberOfAyahs: 286,
-          },
+          { number: 1, name: "الفاتحة", englishName: "Al-Fatihah", englishNameTranslation: "The Opening", numberOfAyahs: 7 },
+          { number: 2, name: "البقرة", englishName: "Al-Baqarah", englishNameTranslation: "The Cow", numberOfAyahs: 286 },
         ]);
       } finally {
         setLoading(false);
@@ -58,94 +52,126 @@ export default function SurahSelector({
     })();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center rounded-2xl border border-gray-100 bg-white p-12 shadow-lg">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
-      </div>
-    );
-  }
-
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-lg sm:p-8">
-      <h2 className="mb-6 text-center text-xl font-bold sm:text-2xl">
-        Select Surah & Ayah
-      </h2>
-
-      <div className="space-y-5">
-        {/* Surah */}
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-gray-500 sm:text-sm">
-            Surah
-          </label>
-          <div className="relative">
-            <select
-              value={selectedSurah}
-              onChange={(e) => {
-                onSurahChange(Number(e.target.value));
-                onAyahChange(1);
-              }}
-              className="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 pr-10 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 sm:text-base"
-            >
-              {surahs.map((s) => (
-                <option key={s.number} value={s.number}>
-                  {s.number}. {s.englishName} — {s.name} (
-                  {s.englishNameTranslation})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+    <div className="space-y-5">
+      {/* Surah Selector */}
+      <div className="relative">
+        <button
+          onClick={() => setOpen(!open)}
+          className="card-pinterest flex w-full items-center justify-between gap-3 px-4 py-3.5 sm:px-5 sm:py-4"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-sm font-bold text-white shadow-md">
+              {current?.number || "?"}
+            </div>
+            <div className="min-w-0 text-left">
+              <p className="truncate font-semibold text-gray-900">
+                {current?.englishName || "Select a Surah"}
+              </p>
+              {current && (
+                <p className="truncate text-xs text-gray-400">
+                  {current.englishNameTranslation} · {current.numberOfAyahs} ayahs
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+          <ChevronDown className={`h-5 w-5 shrink-0 text-gray-400 transition ${open ? "rotate-180" : ""}`} />
+        </button>
 
-        {/* Ayah */}
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-gray-500 sm:text-sm">
-            Ayah
-          </label>
-          <div className="relative">
-            <select
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-gray-100 bg-white shadow-xl animate-in slide-in-from-top-2">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-600" />
+                </div>
+              ) : (
+                <div className="p-1.5 space-y-0.5">
+                  {surahs.map((s) => (
+                    <button
+                      key={s.number}
+                      onClick={() => {
+                        onSurahChange(s.number);
+                        setOpen(false);
+                      }}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                        s.number === selectedSurah
+                          ? "bg-emerald-50"
+                          : "hover:bg-gray-50"
+                      }`}
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-xs font-bold text-emerald-700">
+                        {s.number}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-gray-900">
+                          {s.englishName}
+                        </p>
+                        <p className="truncate text-xs text-gray-400">
+                          {s.englishNameTranslation}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-sm text-emerald-700" dir="rtl">
+                        {s.name}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Ayah Number Selector */}
+      {current && (
+        <div className="card-pinterest p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Ayah Number
+            </label>
+            <span className="text-xs text-gray-400">
+              of {current.numberOfAyahs}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={1}
+              max={current.numberOfAyahs}
               value={selectedAyah}
               onChange={(e) => onAyahChange(Number(e.target.value))}
-              className="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 pr-10 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 sm:text-base"
-            >
-              {Array.from(
-                { length: current?.numberOfAyahs || 7 },
-                (_, i) => i + 1,
-              ).map((n) => (
-                <option key={n} value={n}>
-                  Ayah {n}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              className="flex-1 h-2 appearance-none rounded-full bg-emerald-100 accent-emerald-600 cursor-pointer"
+            />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-sm font-bold text-emerald-700">
+              {selectedAyah}
+            </span>
           </div>
         </div>
+      )}
 
-        {/* Preview */}
-        <div className="rounded-xl bg-emerald-50 p-4 text-center sm:p-5">
-          <p className="text-xs text-gray-500">You will recite</p>
-          <p className="mt-1 text-lg font-bold text-emerald-700 sm:text-xl">
-            {current?.englishName}
-          </p>
-          <p
-            className="mt-0.5 text-2xl text-emerald-800 sm:text-3xl"
-            dir="rtl"
-            style={{ fontFamily: "'Amiri Quran', serif" }}
-          >
-            {current?.name}
-          </p>
-          <p className="mt-1 text-sm text-gray-600">Ayah {selectedAyah}</p>
+      {/* Start Button */}
+      <button
+        onClick={onStart}
+        disabled={!current}
+        className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Play className="h-5 w-5" />
+        Start Recitation
+      </button>
+
+      {/* Quick stats */}
+      {current && (
+        <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+          <span>{REVELATION_ICONS[current.englishNameTranslation?.includes("Meccan") ? "Meccan" : "Medinan"] || "📖"}</span>
+          <span>Surah {current.number}</span>
+          <span className="flex items-center gap-1">
+            <Star className="h-3 w-3" />
+            Juz&apos; {current.number <= 2 ? 1 : Math.ceil(current.number / 114 * 30)}
+          </span>
         </div>
-
-        {/* Start */}
-        <button
-          onClick={onStart}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 active:scale-[.98] sm:py-3.5 sm:text-base"
-        >
-          <Play className="h-5 w-5" /> Start Recitation
-        </button>
-      </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ── Premium Quranic Fonts ────────────────────────── */
-@import url("https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Scheherazade+New:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@400;500;600;700&family=Lateef:wght@200;300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Scheherazade+New:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@400;500;600;700&family=Lateef:wght@200;300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap");
 
 @font-face {
   font-family: "Uthmani";
@@ -11,8 +11,7 @@
   font-display: swap;
 }
 
-/* ── Base ─────────────────────────────────────────── */
-
+/* ── Design Tokens ───────────────────────────────── */
 :root {
   --ring: 16 185 129;
   --tajweed-qalqalah: #10b981;
@@ -22,10 +21,13 @@
   --tajweed-ikhfa: #f97316;
   --tajweed-iqlab: #ec4899;
   --tajweed-idhaar: #14b8a6;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --card-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --card-radius: 1.25rem;
+  --card-radius-sm: 0.75rem;
 }
 
-/* ── Arabic typography ────────────────────────────── */
-
+/* ── Arabic Typography ───────────────────────────── */
 .arabic-text {
   font-family: "Uthmani", "Amiri Quran", "Scheherazade New", "Noto Naskh Arabic", serif;
   font-size: 1.75rem;
@@ -49,26 +51,15 @@
 }
 
 @media (min-width: 640px) {
-  .arabic-text {
-    font-size: 2.25rem;
-    line-height: 3;
-  }
-  .quran-page {
-    font-size: 2rem;
-    line-height: 2.8;
-  }
+  .arabic-text { font-size: 2.25rem; line-height: 3; }
+  .quran-page { font-size: 2rem; line-height: 2.8; }
 }
 @media (min-width: 1024px) {
-  .arabic-text {
-    font-size: 2.5rem;
-  }
-  .quran-page {
-    font-size: 2.25rem;
-  }
+  .arabic-text { font-size: 2.5rem; }
+  .quran-page { font-size: 2.25rem; }
 }
 
-/* ── Mushaf-style ayah markers ────────────────────── */
-
+/* ── Mushaf-style Ayah Markers ───────────────────── */
 .ayah-marker {
   display: inline-flex;
   align-items: center;
@@ -86,8 +77,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* ── Bismillah decorative ─────────────────────────── */
-
+/* ── Bismillah Decorative ────────────────────────── */
 .bismillah {
   font-family: "Amiri Quran", "Scheherazade New", serif;
   font-size: 2.5rem;
@@ -96,167 +86,132 @@
   color: #065f46;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
-@media (min-width: 640px) {
-  .bismillah { font-size: 3rem; }
-}
+@media (min-width: 640px) { .bismillah { font-size: 3rem; } }
 
-/* ── Tajweed colour-coding ────────────────────────── */
+/* ── Tajweed Color-coding ────────────────────────── */
+.tajweed-qalqalah { color: #059669; background: rgba(16,185,129,0.08); border-bottom: 2px solid rgba(16,185,129,0.4); padding: 0 1px; }
+.tajweed-ghunna { color: #d97706; background: rgba(245,158,11,0.08); border-bottom: 2px solid rgba(245,158,11,0.4); padding: 0 1px; }
+.tajweed-madd { color: #2563eb; background: rgba(59,130,246,0.08); border-bottom: 2px solid rgba(59,130,246,0.4); padding: 0 1px; }
+.tajweed-idgham { color: #7c3aed; background: rgba(139,92,246,0.08); border-bottom: 2px solid rgba(139,92,246,0.4); padding: 0 1px; }
+.tajweed-ikhfa { color: #ea580c; background: rgba(249,115,22,0.08); border-bottom: 2px solid rgba(249,115,22,0.4); padding: 0 1px; }
+.tajweed-error { background: rgba(239,68,68,0.12); border-bottom: 2px wavy rgba(239,68,68,0.5); padding: 0 1px; }
 
-.tajweed-qalqalah {
-  color: #059669;
-  background: rgba(16, 185, 129, 0.08);
-  border-bottom: 2px solid rgba(16, 185, 129, 0.4);
-  padding: 0 1px;
-}
-.tajweed-ghunna {
-  color: #d97706;
-  background: rgba(245, 158, 11, 0.08);
-  border-bottom: 2px solid rgba(245, 158, 11, 0.4);
-  padding: 0 1px;
-}
-.tajweed-madd {
-  color: #2563eb;
-  background: rgba(59, 130, 246, 0.08);
-  border-bottom: 2px solid rgba(59, 130, 246, 0.4);
-  padding: 0 1px;
-}
-.tajweed-idgham {
-  color: #7c3aed;
-  background: rgba(139, 92, 246, 0.08);
-  border-bottom: 2px solid rgba(139, 92, 246, 0.4);
-  padding: 0 1px;
-}
-.tajweed-ikhfa {
-  color: #ea580c;
-  background: rgba(249, 115, 22, 0.08);
-  border-bottom: 2px solid rgba(249, 115, 22, 0.4);
-  padding: 0 1px;
-}
-.tajweed-error {
-  background: rgba(239, 68, 68, 0.12);
-  border-bottom: 2px wavy rgba(239, 68, 68, 0.5);
-  padding: 0 1px;
-}
-
-/* ── Animations ───────────────────────────────────── */
-
+/* ── Animations ──────────────────────────────────── */
 @keyframes pulse-ring {
-  0%, 100% {
-    transform: scale(0.97);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.04);
-    opacity: 0.75;
-  }
+  0%, 100% { transform: scale(0.97); opacity: 1; }
+  50% { transform: scale(1.04); opacity: 0.75; }
 }
-.recording-pulse {
-  animation: pulse-ring 1.4s ease-in-out infinite;
-}
+.recording-pulse { animation: pulse-ring 1.4s ease-in-out infinite; }
 
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.fade-up {
-  animation: fade-up 0.4s ease-out both;
-}
+.fade-up { animation: fade-up 0.4s ease-out both; }
 
 @keyframes score-pop {
   from { transform: scale(0.6); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
-.score-pop {
-  animation: score-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
+.score-pop { animation: score-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
 
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
-.shimmer {
-  background: linear-gradient(90deg, #f0fdf4 25%, #d1fae5 50%, #f0fdf4 75%);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
-}
+.shimmer { background: linear-gradient(90deg, #f0fdf4 25%, #d1fae5 50%, #f0fdf4 75%); background-size: 200% 100%; animation: shimmer 2s infinite; }
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
 }
-.float {
-  animation: float 3s ease-in-out infinite;
+.float { animation: float 3s ease-in-out infinite; }
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(16,185,129,0.2); }
+  50% { box-shadow: 0 0 20px rgba(16,185,129,0.4); }
 }
 
-/* ── Scrollbar ────────────────────────────────────── */
-
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: rgb(var(--ring));
-  border-radius: 999px;
+/* ── Pinterest-inspired Cards ────────────────────── */
+.card-pinterest {
+  background: white;
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  overflow: hidden;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #059669;
-}
-
-/* ── Utilities ────────────────────────────────────── */
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+.card-pinterest:hover {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-2px);
 }
 
-/* ── Gradient transitions ─────────────────────────── */
-
-.glass {
+.card-glass {
   background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
 }
 
-.glass-dark {
-  background: rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+.card-mushaf {
+  background: linear-gradient(135deg, #fefce8 0%, #ffffff 50%, #fefce8 100%);
+  border: 2px solid rgba(5, 150, 105, 0.12);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow), inset 0 1px 3px rgba(255,255,255,0.5);
 }
 
-/* ── Mushaf page decoration ───────────────────────── */
+/* ── Glass Effects ───────────────────────────────── */
+.glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.glass-dark { background: rgba(0,0,0,0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 
+/* ── Gradients ───────────────────────────────────── */
+.gradient-hero {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 40%, #ecfdf5 70%, #fefce8 100%);
+}
+
+.gradient-card-emerald {
+  background: linear-gradient(135deg, #f0fdf4, #ffffff);
+}
+
+.gradient-card-amber {
+  background: linear-gradient(135deg, #fefce8, #ffffff);
+}
+
+.gradient-card-sky {
+  background: linear-gradient(135deg, #f0f9ff, #ffffff);
+}
+
+/* ── Mushaf Page Decoration ──────────────────────── */
 .mushaf-border {
   position: relative;
   border: 2px solid rgba(5, 150, 105, 0.15);
-  border-radius: 1.5rem;
+  border-radius: var(--card-radius);
   background: linear-gradient(135deg, #fefce8 0%, #ffffff 50%, #fefce8 100%);
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.05),
-    0 2px 4px -1px rgba(0, 0, 0, 0.03),
-    inset 0 1px 3px rgba(255, 255, 255, 0.5);
+  box-shadow: var(--card-shadow), inset 0 1px 3px rgba(255,255,255,0.5);
 }
-
 .mushaf-border::before {
-  content: "";
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  width: 40px;
-  height: 40px;
+  content: ""; position: absolute; top: 8px; left: 8px;
+  width: 40px; height: 40px;
   border-left: 2px solid rgba(5, 150, 105, 0.2);
   border-top: 2px solid rgba(5, 150, 105, 0.2);
-  border-radius: 8px 0 0 0;
-  pointer-events: none;
+  border-radius: 8px 0 0 0; pointer-events: none;
 }
-
 .mushaf-border::after {
-  content: "";
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 40px;
-  height: 40px;
+  content: ""; position: absolute; bottom: 8px; right: 8px;
+  width: 40px; height: 40px;
   border-right: 2px solid rgba(5, 150, 105, 0.2);
   border-bottom: 2px solid rgba(5, 150, 105, 0.2);
-  border-radius: 0 0 8px 0;
-  pointer-events: none;
+  border-radius: 0 0 8px 0; pointer-events: none;
+}
+
+/* ── Scrollbar ───────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(var(--ring)); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #059669; }
+
+/* ── Utilities ───────────────────────────────────── */
+@layer utilities {
+  .text-balance { text-wrap: balance; }
 }
