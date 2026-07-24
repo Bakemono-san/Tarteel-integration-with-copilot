@@ -7,7 +7,8 @@
 
 @font-face {
   font-family: "Uthmani";
-  src: url("https://cdn.jsdelivr.net/npm/quranic-fonts@1.0.0/fonts/uthmanic/v1/me_quran_uthmanic_v1.woff2") format("woff2");
+  src: url("https://fonts.qurancomplex.gov.sa/fonts/UthmanicHafs_v18.woff2") format("woff2"),
+       url("https://cdn.alquran.cloud/public/fonts/uthmanic/v1/me_quran_uthmanic_v1.woff2") format("woff2");
   font-display: swap;
 }
 
