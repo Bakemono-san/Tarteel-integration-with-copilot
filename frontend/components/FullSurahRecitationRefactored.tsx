@@ -1,37 +1,22 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { X, Mic, MicOff, Loader, Sparkles, Radio, AudioWaveform as Waveform } from "lucide-react";
+import { X, Mic, MicOff, Loader, Sparkles, AudioWaveform as Waveform } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useRecitationWebSocket } from "@/lib/useRecitationWebSocket";
 
-interface Ayah {
-  number: number;
-  text: string;
-}
+interface Ayah { number: number; text: string }
 
 interface AnalysisResult {
   accuracy: number;
   score?: number;
   transcript: string;
   expected: string;
-  errors: Array<{
-    type: string;
-    expected: string;
-    received: string;
-    actual?: string;
-    confidence_level?: string;
-  }>;
+  errors: Array<{ type: string; expected: string; received: string; actual?: string; confidence_level?: string }>;
   error_count: number;
   feedback?: string;
   corrections?: string[];
-  tajweed_rules?: Array<{
-    rule: string;
-    status: string;
-    level?: string;
-    description?: string;
-  }>;
+  tajweed_rules?: Array<{ rule: string; status: string; level?: string; description?: string }>;
 }
 
 interface FullSurahRecitationProps {
@@ -53,39 +38,22 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult | null>(null);
   const [highlightedAyahs, setHighlightedAyahs] = useState<Record<number, any[]>>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [recogMode, setRecogMode] = useState<RecogMode>("whisper");
 
-  // Refs
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const accumulatedTranscriptRef = useRef("");
   const userStoppedRef = useRef(false);
   const browserRestartTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const { analysis: wsAnalysis, isConnected, sendAudioData, wsError } = useRecitationWebSocket();
-
-  // ── Whisper mode: receive live transcription ──
-  useEffect(() => {
-    if (recogMode === "whisper" && wsAnalysis?.transcription) {
-      setTranscript(wsAnalysis.transcription);
-    }
-  }, [wsAnalysis, recogMode]);
-
-  // ── Auto-switch to browser STT if WebSocket fails ──
-  useEffect(() => {
-    if (recogMode === "whisper" && wsError && !isConnected) {
-      console.log("WebSocket unavailable, switching to browser STT");
-      setRecogMode("browser");
-    }
-  }, [wsError, isConnected, recogMode]);
-
   // ── Browser STT init ──
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
     try {
-      const r = new SpeechRecognition();
+      const r = new SR();
       r.continuous = true;
       r.interimResults = true;
       r.lang = "ar-SA";
@@ -95,44 +63,28 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
       r.onresult = (event: any) => {
         let finalPart = "";
         let interimPart = "";
-        const startIdx = event.resultIndex;
-
-        for (let i = startIdx; i < event.results.length; i++) {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
           const t = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalPart += t + " ";
-          } else {
-            interimPart += t;
-          }
+          if (event.results[i].isFinal) { finalPart += t + " "; }
+          else { interimPart += t; }
         }
-        if (finalPart) {
-          accumulatedTranscriptRef.current += finalPart;
-        }
+        if (finalPart) accumulatedTranscriptRef.current += finalPart;
         setTranscript(accumulatedTranscriptRef.current + interimPart);
       };
 
       r.onerror = (event: any) => {
-        if (event.error !== "aborted" && event.error !== "no-speech") {
-          console.error("STT error:", event.error);
-        }
+        if (event.error !== "aborted" && event.error !== "no-speech") console.error("STT error:", event.error);
       };
 
       r.onend = () => {
         if (!userStoppedRef.current) {
-          // Auto-restart (browser times out sessions after ~60s)
-          browserRestartTimer.current = setTimeout(() => {
-            try { r.start(); } catch {}
-          }, 150);
+          browserRestartTimer.current = setTimeout(() => { try { r.start(); } catch {} }, 150);
         } else {
           setIsListening(false);
         }
       };
-
       recognitionRef.current = r;
-    } catch (e) {
-      console.error("STT init error:", e);
-    }
-
+    } catch (e) { console.error("STT init error:", e); }
     return () => {
       if (browserRestartTimer.current) clearTimeout(browserRestartTimer.current);
       try { recognitionRef.current?.stop(); } catch {}
@@ -141,29 +93,25 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
 
   // ── Fetch surah ──
   useEffect(() => {
-    const fetchSurah = async () => {
+    (async () => {
       try {
         setIsLoading(true);
         const res = await fetch(`/api/quran/surah/${surahNumber}`);
         if (!res.ok) throw new Error();
         const data = await res.json();
         setSurahName(data.surah?.englishName || "");
-        const ayahsData: Ayah[] = (data.ayahs || []).map((x: any) => ({ number: x.number, text: x.text }));
-        setAyahs(ayahsData);
-        setDisplayAyahs(ayahsData.slice(0, 10));
-      } catch {
-        setError("Failed to load surah.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchSurah();
+        const a: Ayah[] = (data.ayahs || []).map((x: any) => ({ number: x.number, text: x.text }));
+        setAyahs(a);
+        setDisplayAyahs(a.slice(0, 10));
+      } catch { setError("Failed to load surah."); }
+      finally { setIsLoading(false); }
+    })();
   }, [surahNumber]);
 
-  // ── Start / Stop listening ──
-  const startWhisper = async () => {
+  // ── Whisper: record audio, then transcribe via REST ──
+  const startWhisperRecord = async () => {
     userStoppedRef.current = false;
-    accumulatedTranscriptRef.current = "";
+    audioChunksRef.current = [];
     setTranscript("");
     setError("");
 
@@ -171,32 +119,26 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
-
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-          ? "audio/webm" : "audio/ogg";
-
+        : MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/ogg";
       const mr = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mr;
 
       mr.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const b64 = reader.result?.toString().split(",")[1] || "";
-            sendAudioData(b64, surahNumber, 1);
-          };
-          reader.readAsDataURL(e.data);
-        }
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
 
-      mr.onstop = () => {
+      mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         setIsListening(false);
+        // Now transcribe via REST
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        await transcribeViaRest(blob);
       };
 
-      mr.start(2000);
+      mr.onerror = () => setError("Recording error.");
+      mr.start(1000);
       setIsListening(true);
     } catch (err: any) {
       if (err.name === "NotAllowedError") setError("Microphone permission denied.");
@@ -204,69 +146,81 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
     }
   };
 
-  const startBrowser = () => {
+  const transcribeViaRest = async (blob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const reader = new FileReader();
+      const b64 = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result?.toString().split(",")[1] || "");
+        reader.readAsDataURL(blob);
+      });
+      const res = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audio: b64, surah_number: surahNumber, ayah_number: 1 }),
+      });
+      const data = await res.json();
+      if (data.text) {
+        setTranscript(data.text);
+        accumulatedTranscriptRef.current = data.text;
+      } else {
+        setError("Transcription returned no text. Try again.");
+      }
+    } catch {
+      setError("Transcription failed. Is the backend running?");
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  // ── Browser STT ──
+  const startBrowserSTT = () => {
     userStoppedRef.current = false;
     accumulatedTranscriptRef.current = "";
     setTranscript("");
     setError("");
-
     if (recognitionRef.current) {
-      try { recognitionRef.current.start(); } catch (err) { console.error("STT start:", err); }
+      try { recognitionRef.current.start(); } catch {}
     }
   };
 
-  const stopWhisper = () => {
+  const stopBrowserSTT = () => {
     userStoppedRef.current = true;
-    if (mediaRecorderRef.current && isListening) {
-      mediaRecorderRef.current.stop();
-    }
-  };
-
-  const stopBrowser = () => {
-    userStoppedRef.current = true;
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch {}
-    }
+    if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
     setIsListening(false);
   };
 
-  const startListening = recogMode === "whisper" ? startWhisper : startBrowser;
-  const stopListening = recogMode === "whisper" ? stopWhisper : stopBrowser;
+  // ── Generic start/stop ──
+  const startListening = recogMode === "whisper" ? startWhisperRecord : startBrowserSTT;
+  const stopListening = recogMode === "whisper"
+    ? () => { userStoppedRef.current = true; if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop(); }
+    : stopBrowserSTT;
 
   // ── Analyze ──
   const handleAnalyze = useCallback(async () => {
-    if (!transcript.trim()) { setError("Please recite first."); return; }
+    const text = transcript || accumulatedTranscriptRef.current;
+    if (!text.trim()) { setError("Please recite first."); return; }
     setIsAnalyzing(true);
     try {
       const expectedText = displayAyahs.map((a) => a.text).join(" ").replace(/\s+/g, " ");
       const res = await fetch("/api/quran/analyze-recitation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript, expected_text: expectedText, surah_number: surahNumber, ayahs: displayAyahs }),
+        body: JSON.stringify({ transcript: text, expected_text: expectedText, surah_number: surahNumber, ayahs: displayAyahs }),
       });
       const data = await res.json();
       setAnalysisResults(data);
-
       if (data.errors?.length > 0) {
         const m: Record<number, any[]> = {};
-        data.errors.forEach((e: any) => {
-          const n = e.ayah_number || displayAyahs[0]?.number;
-          (m[n] ??= []).push(e);
-        });
+        data.errors.forEach((e: any) => { const n = e.ayah_number || displayAyahs[0]?.number; (m[n] ??= []).push(e); });
         setHighlightedAyahs(m);
-      } else {
-        setHighlightedAyahs({});
-      }
+      } else { setHighlightedAyahs({}); }
       setShowReview(true);
-    } catch {
-      setError("Analysis failed.");
-    } finally {
-      setIsAnalyzing(false);
-    }
+    } catch { setError("Analysis failed."); }
+    finally { setIsAnalyzing(false); }
   }, [transcript, displayAyahs, surahNumber]);
 
-  // ── Highlight helper ──
-  const getHighlighted = useCallback((text: string, num: number) => {
+  const getHighlight = useCallback((text: string, num: number) => {
     if (!highlightedAyahs[num]?.length) return text;
     let r = text;
     highlightedAyahs[num].forEach((e: any) => {
@@ -278,7 +232,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
     return r;
   }, [highlightedAyahs]);
 
-  // ── Loading ──
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center">
@@ -292,7 +245,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
-      {/* Header */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-200">
         <div className="w-full px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2 mb-2">
@@ -332,16 +284,10 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
               <Waveform className="h-3 w-3" />
               Browser STT
             </button>
-            {recogMode === "whisper" && (
-              <span className={`text-[10px] ${isConnected ? "text-emerald-600" : "text-amber-500"}`}>
-                {isConnected ? "●" : "○"}
-              </span>
-            )}
           </div>
         </div>
       </header>
 
-      {/* Main */}
       <main className="w-full px-3 sm:px-6 py-4 sm:py-8 pb-36 sm:pb-40">
         {error && (
           <div className="mb-4 p-3 sm:p-4 bg-red-50 border-2 border-red-200 rounded-xl text-xs sm:text-sm">
@@ -362,7 +308,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
             <p className="text-base sm:text-2xl md:text-3xl font-semibold text-gray-900 quran-page inline">
               {displayAyahs.map((ayah, i) => (
                 <span key={ayah.number}>
-                  <span dangerouslySetInnerHTML={{ __html: getHighlighted(ayah.text, ayah.number) }} />
+                  <span dangerouslySetInnerHTML={{ __html: getHighlight(ayah.text, ayah.number) }} />
                   <span className="ayah-marker">{ayah.number}</span>
                   {i < displayAyahs.length - 1 && " "}
                 </span>
@@ -375,11 +321,12 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
         <div className="flex flex-col items-center gap-4">
           <button
             onClick={isListening ? stopListening : startListening}
+            disabled={isTranscribing}
             className={`relative w-20 h-20 sm:w-28 sm:h-28 rounded-full flex items-center justify-center transition-all transform hover:scale-110 active:scale-95 font-medium shadow-xl ${
               isListening
                 ? "bg-red-500 hover:bg-red-600 text-white recording-pulse"
                 : "bg-emerald-600 hover:bg-emerald-700 text-white"
-            }`}
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {isListening ? <MicOff className="h-8 w-8 sm:h-12 sm:w-12" /> : <Mic className="h-8 w-8 sm:h-12 sm:w-12" />}
           </button>
@@ -389,14 +336,18 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
               <p className="text-sm sm:text-lg font-semibold text-emerald-700 flex items-center gap-2">
                 <Loader className="h-4 w-4 animate-spin" /> Recording...
                 {recogMode === "whisper" && (
-                  <span className="text-xs text-amber-600 font-normal">(streaming to server)</span>
+                  <span className="text-xs text-amber-600 font-normal">(stop to transcribe)</span>
                 )}
+              </p>
+            ) : isTranscribing ? (
+              <p className="text-sm sm:text-lg font-semibold text-amber-600 flex items-center gap-2">
+                <Loader className="h-4 w-4 animate-spin" /> Transcribing with Whisper...
               </p>
             ) : transcript ? (
               <p className="text-sm sm:text-lg font-semibold text-emerald-700">✅ Complete</p>
             ) : (
               <p className="text-sm sm:text-lg font-semibold text-gray-500">
-                {recogMode === "whisper" ? "Tap mic to start (Whisper)" : "Tap mic to start"}
+                {recogMode === "whisper" ? "🎤 Tap to record (Whisper)" : "🎤 Tap to start"}
               </p>
             )}
           </div>
@@ -424,7 +375,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
             {analysisResults && (
               <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 border-2 border-emerald-300 rounded-xl p-6 sm:p-8 text-center">
                 <p className="text-5xl sm:text-6xl font-bold text-emerald-700 mb-2 score-pop">
-                  {analysisResults.score != null ? analysisResults.score : (analysisResults.accuracy * 100).toFixed(0)}
+                  {analysisResults.score ?? (analysisResults.accuracy * 100).toFixed(0)}
                 </p>
                 <p className="text-base sm:text-lg font-semibold text-emerald-900">Overall Score</p>
                 <p className="text-sm text-emerald-600">Accuracy {(analysisResults.accuracy * 100).toFixed(1)}%</p>
@@ -432,9 +383,7 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
             )}
 
             {analysisResults?.feedback && (
-              <div className="bg-sky-50 border-2 border-sky-200 rounded-xl p-4 text-sm text-sky-900">
-                {analysisResults.feedback}
-              </div>
+              <div className="bg-sky-50 border-2 border-sky-200 rounded-xl p-4 text-sm text-sky-900">{analysisResults.feedback}</div>
             )}
 
             <div>
@@ -443,7 +392,6 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
                 <p className="text-gray-900 leading-relaxed" dir="rtl">{analysisResults?.transcript || transcript}</p>
               </div>
             </div>
-
             <div>
               <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3">Expected:</h3>
               <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
@@ -474,51 +422,36 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
 
             {analysisResults?.errors && analysisResults.errors.length > 0 ? (
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-red-800 mb-4">
+                <h3 className={`text-base sm:text-lg font-bold mb-4 ${analysisResults.errors.some(e => e.confidence_level === "low") ? "text-amber-800" : "text-red-800"}`}>
                   Issues ({analysisResults.error_count || analysisResults.errors.length})
                 </h3>
                 <div className="space-y-3">
                   {analysisResults.errors.map((error, idx) => (
-                    <div
-                      key={idx}
-                      className={`${error.confidence_level === "low" ? "bg-amber-50 border-l-4 border-amber-400" : "bg-red-50 border-l-4 border-red-400"} p-3 sm:p-4 rounded-xl`}
-                    >
+                    <div key={idx} className={`${error.confidence_level === "low" ? "bg-amber-50 border-l-4 border-amber-400" : "bg-red-50 border-l-4 border-red-400"} p-3 sm:p-4 rounded-xl`}>
                       <p className="font-semibold capitalize text-sm sm:text-base">
                         {error.type}
-                        {error.confidence_level === "low" && (
-                          <span className="ml-2 text-xs font-normal text-amber-600">(low confidence)</span>
-                        )}
+                        {error.confidence_level === "low" && <span className="ml-2 text-xs font-normal text-amber-600">(low confidence)</span>}
                       </p>
-                      <p className="text-xs sm:text-sm mt-1">
-                        <span className="font-medium">Expected:</span>{" "}
-                        <span dir="rtl">{error.expected}</span>
-                      </p>
-                      <p className="text-xs sm:text-sm">
-                        <span className="font-medium">You said:</span>{" "}
-                        <span dir="rtl">{error.received || error.actual}</span>
-                      </p>
+                      {error.expected && <p className="text-xs sm:text-sm mt-1"><span className="font-medium">Expected:</span> <span dir="rtl">{error.expected}</span></p>}
+                      <p className="text-xs sm:text-sm"><span className="font-medium">You said:</span> <span dir="rtl">{error.received || error.actual}</span></p>
                     </div>
                   ))}
                 </div>
               </div>
-            ) : (
-              analysisResults && (
-                <div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-8 text-center">
-                  <p className="text-4xl mb-3">✅</p>
-                  <p className="text-xl font-semibold text-emerald-900">Masha'Allah! Perfect Recitation!</p>
-                  <p className="text-emerald-700 mt-2">No errors found</p>
-                </div>
-              )
-            )}
+            ) : analysisResults ? (
+              <div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-8 text-center">
+                <p className="text-4xl mb-3">✅</p>
+                <p className="text-xl font-semibold text-emerald-900">Masha'Allah! Perfect Recitation!</p>
+                <p className="text-emerald-700 mt-2">No errors found</p>
+              </div>
+            ) : null}
 
             {analysisResults?.corrections && analysisResults.corrections.length > 0 && (
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-amber-800 mb-3">Suggestions</h3>
                 <ul className="space-y-2">
                   {analysisResults.corrections.map((c, idx) => (
-                    <li key={idx} className="flex gap-2 text-sm text-gray-700">
-                      <span className="text-emerald-500">•</span> {c}
-                    </li>
+                    <li key={idx} className="flex gap-2 text-sm text-gray-700"><span className="text-emerald-500">•</span> {c}</li>
                   ))}
                 </ul>
               </div>
@@ -526,17 +459,10 @@ export default function FullSurahRecitation({ surahNumber, onBack }: FullSurahRe
 
             <div className="flex gap-3 pt-4">
               <Button variant="secondary" onClick={() => {
-                setShowReview(false);
-                setAnalysisResults(null);
-                accumulatedTranscriptRef.current = "";
-                setTranscript("");
-                setHighlightedAyahs({});
-              }} className="flex-1">
-                🔄 Try Again
-              </Button>
-              <Button variant="outline" onClick={onBack} className="flex-1">
-                ← Back
-              </Button>
+                setShowReview(false); setAnalysisResults(null); accumulatedTranscriptRef.current = "";
+                setTranscript(""); setHighlightedAyahs({});
+              }} className="flex-1">🔄 Try Again</Button>
+              <Button variant="outline" onClick={onBack} className="flex-1">← Back</Button>
             </div>
           </div>
         </DialogContent>

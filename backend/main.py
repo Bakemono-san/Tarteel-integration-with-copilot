@@ -519,6 +519,27 @@ async def analyze_recitation(request: AnalyzeRecitationRequest):
         traceback.print_exc()
         return {"error": str(e)}
 
+# ── REST Transcription Endpoint (fallback when WebSocket unavailable) ──
+
+class TranscriptionRequest(BaseModel):
+    audio: str  # base64-encoded audio
+    surah_number: int = 1
+    ayah_number: int = 1
+
+@app.post("/api/transcribe")
+async def transcribe_audio_rest(request: TranscriptionRequest):
+    """Transcribe base64 audio via REST (fallback when WebSocket is unavailable)"""
+    try:
+        import base64
+        audio_bytes = base64.b64decode(request.audio)
+        if not audio_bytes:
+            return {"error": "Empty audio"}
+        transcription = await tarteel_model.transcribe_audio(audio_bytes)
+        return transcription
+    except Exception as e:
+        print(f"❌ REST transcription error: {e}")
+        return {"error": str(e), "text": ""}
+
 # ── Makharij Endpoints ─────────────────────────────────────────────
 
 @app.get("/api/tajweed/makhraj/{letter}")
