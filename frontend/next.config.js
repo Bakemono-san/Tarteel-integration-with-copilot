@@ -11,7 +11,7 @@ const nextConfig = {
         source: "/api/:path*",
         destination: process.env.NEXT_PUBLIC_API_URL
           ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`
-          : "http://169.58.4.78:8081/api/:path*",
+          : "https://vendor-person-television-increases.trycloudflare.com/api/:path*",
       },
     ];
   },
