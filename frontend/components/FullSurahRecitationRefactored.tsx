@@ -114,7 +114,7 @@ export default function FullSurahRecitation({
       try {
         setIsLoading(true);
         const res = await fetch(
-          `https://185.245.183.209:8081/api/quran/surah/${surahNumber}`,
+          `/api/quran/surah/${surahNumber}`,
         );
         if (!res.ok) throw new Error("Failed to fetch surah");
 
@@ -154,7 +154,7 @@ export default function FullSurahRecitation({
         .replace(/\s+/g, " ");
 
       const response = await fetch(
-        "http://185.245.183.209:8081/api/quran/analyze-recitation",
+        "/api/quran/analyze-recitation",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
