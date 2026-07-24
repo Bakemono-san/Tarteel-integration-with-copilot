@@ -6,7 +6,7 @@ const nextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "https://vendor-person-television-increases.trycloudflare.com/api/:path*",
+        destination: `https://messaging-lincoln-committee-monitors.trycloudflare.com/api/:path*`,
       },
     ];
   },
