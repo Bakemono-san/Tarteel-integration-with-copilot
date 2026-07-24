@@ -22,24 +22,28 @@ interface AnalysisResponse {
   partial?: boolean;
 }
 
+const TUNNEL_URL = "wss://messaging-lincoln-committee-monitors.trycloudflare.com/ws/recitation";
+
 function getWsUrl(): string {
-  if (typeof window === "undefined") return "";
-  const host = window.location.host;
+  // 1. Use env var if set (highest priority)
+  const envUrl = process.env.NEXT_PUBLIC_WS_URL;
+  if (envUrl) return envUrl;
 
-  // Vercel or non-local deploy — WebSocket won't work without a backend server
-  if (!host.includes("localhost") && !host.includes("127.0.0.1") && !host.includes("192.168") && !host.includes("10.")) {
-    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${proto}//${host}/ws/recitation`;
+  // 2. Check if we're on the tunnel domain directly
+  if (typeof window !== "undefined") {
+    const host = window.location.host;
+    if (host.includes("trycloudflare.com")) {
+      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      return `${proto}//${host}/ws/recitation`;
+    }
+    // 3. Local dev fallback
+    if (host.includes("localhost") || host.includes("127.0.0.1")) {
+      return "ws://localhost:8081/ws/recitation";
+    }
   }
-  return "ws://localhost:8081/ws/recitation";
-}
 
-function isVercelDeploy(): boolean {
-  if (typeof window === "undefined") return false;
-  return (
-    window.location.host.includes("vercel.app") ||
-    window.location.host.endsWith(".vercel.app")
-  );
+  // 4. Default: use tunnel
+  return TUNNEL_URL;
 }
 
 export function useRecitationWebSocket() {
@@ -51,9 +55,9 @@ export function useRecitationWebSocket() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isActiveAnalysisRef = useRef(false);
-  const hasEverConnected = useRef(false);
+  const hasEverConnectedRef = useRef(false);
   const retryCountRef = useRef(0);
-  const maxRetries = isVercelDeploy() ? 0 : 3;
+  const maxRetries = 5;
 
   const cleanup = useCallback(() => {
     if (pingIntervalRef.current) {
@@ -70,25 +74,21 @@ export function useRecitationWebSocket() {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     if (wsRef.current?.readyState === WebSocket.CONNECTING) return;
 
-    if (retryCountRef.current >= maxRetries && maxRetries === 0) {
-      setWsError(
-        "WebSocket not available on this deployment. Use direct REST API mode instead."
-      );
+    if (retryCountRef.current >= maxRetries) {
+      setWsError("Cannot connect to server after multiple attempts.");
       return;
     }
 
     cleanup();
-    const wsUrl = getWsUrl();
-    if (!wsUrl) {
-      setWsError("No WebSocket URL available");
-      return;
-    }
 
     try {
+      const wsUrl = getWsUrl();
+      console.log("[WS] Connecting to:", wsUrl);
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
-        hasEverConnected.current = true;
+        console.log("[WS] Connected");
+        hasEverConnectedRef.current = true;
         retryCountRef.current = 0;
         setIsConnected(true);
         setWsError(null);
@@ -106,45 +106,37 @@ export function useRecitationWebSocket() {
           if (data.type === "analysis") {
             isActiveAnalysisRef.current = true;
             setAnalysis(data);
-            setTimeout(() => {
-              isActiveAnalysisRef.current = false;
-            }, 500);
+            setTimeout(() => { isActiveAnalysisRef.current = false; }, 500);
           } else if (data.type === "error") {
-            console.error("Server error:", data.message);
-            isActiveAnalysisRef.current = false;
-          } else if (data.type === "pong") {
-            // alive
+            console.error("[WS] Server error:", data.message);
           }
-        } catch {
-          // ignore parse errors
-        }
+        } catch {}
       };
 
       ws.onerror = () => {
         setIsConnected(false);
-        if (!hasEverConnected.current) {
-          setWsError("Cannot connect to analysis server. Using browser-based analysis only.");
+        if (!hasEverConnectedRef.current) {
+          setWsError("WebSocket connection failed.");
         }
       };
 
       ws.onclose = () => {
+        console.log("[WS] Closed");
         setIsConnected(false);
         wsRef.current = null;
         cleanup();
 
-        if (hasEverConnected.current && retryCountRef.current < maxRetries) {
-          retryCountRef.current += 1;
-          const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 8000);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
-          }, delay);
+        retryCountRef.current += 1;
+        if (retryCountRef.current <= maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000);
+          reconnectTimeoutRef.current = setTimeout(() => connect(), delay);
         }
       };
 
       wsRef.current = ws;
-    } catch {
-      setIsConnected(false);
-      setWsError("Failed to create WebSocket connection");
+    } catch (err) {
+      console.error("[WS] Creation error:", err);
+      setWsError("Failed to create WebSocket.");
     }
   }, [cleanup]);
 
@@ -160,19 +152,18 @@ export function useRecitationWebSocket() {
   }, [connect, cleanup]);
 
   const sendAudioData = useCallback(
-    (audioBase64: string, surahNumber: number, ayahNumber: number) => {
+    (audioBase64: string, surahNumber: number, ayahNumber: number, timestamp?: string) => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "audio",
-            audio: audioBase64,
-            surahNumber,
-            ayahNumber,
-          })
-        );
+        wsRef.current.send(JSON.stringify({
+          type: "audio",
+          audio: audioBase64,
+          surahNumber,
+          ayahNumber,
+          timestamp: timestamp || Date.now().toString(),
+        }));
       }
     },
-    []
+    [],
   );
 
   const resetAnalysis = useCallback(() => {
@@ -180,11 +171,5 @@ export function useRecitationWebSocket() {
     isActiveAnalysisRef.current = false;
   }, []);
 
-  return {
-    isConnected,
-    analysis,
-    sendAudioData,
-    resetAnalysis,
-    wsError,
-  };
+  return { isConnected, analysis, sendAudioData, resetAnalysis, wsError };
 }
