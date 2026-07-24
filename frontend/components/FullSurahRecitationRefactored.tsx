@@ -18,9 +18,20 @@ interface AnalysisResult {
   errors: Array<{
     type: string;
     expected: string;
-    actual: string;
+    received: string;
+    actual?: string;
+    confidence_level?: string;
+    asr_confidence?: number | null;
   }>;
   error_count: number;
+  feedback?: string;
+  corrections?: string[];
+  tajweed_rules?: Array<{
+    rule: string;
+    status: string;
+    level?: string;
+    description?: string;
+  }>;
 }
 
 interface FullSurahRecitationProps {
@@ -404,13 +415,20 @@ export default function FullSurahRecitation({
               </div>
             )}
 
+            {/* Feedback */}
+            {analysisResults?.feedback && (
+              <div className="bg-sky-50 border-2 border-sky-200 rounded-lg p-4 text-sm text-sky-900">
+                {analysisResults.feedback}
+              </div>
+            )}
+
             {/* Transcription */}
             <div>
               <h3 className="text-lg font-bold text-gray-900 mb-3">
                 You Said:
               </h3>
               <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                <p className="text-gray-900">{transcript}</p>
+                <p className="text-gray-900" dir="rtl">{transcript}</p>
               </div>
             </div>
 
@@ -420,11 +438,42 @@ export default function FullSurahRecitation({
                 Expected:
               </h3>
               <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
-                <p className="text-2xl font-semibold text-gray-900 leading-relaxed">
+                <p className="text-2xl font-semibold text-gray-900 leading-relaxed" dir="rtl">
                   {displayAyahs.map((a) => a.text).join(" ")}
                 </p>
               </div>
             </div>
+
+            {/* Tajweed Rules */}
+            {analysisResults?.tajweed_rules && analysisResults.tajweed_rules.length > 0 && (
+              <div>
+                <h3 className="text-lg font-bold text-emerald-800 mb-3">
+                  Tajweed Rules
+                </h3>
+                <div className="space-y-1.5">
+                  {analysisResults.tajweed_rules.map((rule: any, idx: number) => {
+                    const isGood = rule.status === "applied_correctly";
+                    const isBad = rule.status === "applied_incorrectly" || rule.status === "not_applied";
+                    return (
+                      <div
+                        key={idx}
+                        className={`flex items-center gap-2 p-2 rounded-lg text-sm ${
+                          isGood
+                            ? "bg-emerald-50 text-emerald-800"
+                            : isBad
+                              ? "bg-red-50 text-red-800"
+                              : "bg-gray-50 text-gray-600"
+                        }`}
+                      >
+                        <span>{isGood ? "✅" : isBad ? "⚠️" : "○"}</span>
+                        <span className="font-medium">{rule.rule}</span>
+                        <span className="text-xs text-gray-500">{rule.description}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Errors */}
             {analysisResults &&
@@ -432,36 +481,60 @@ export default function FullSurahRecitation({
             analysisResults.errors.length > 0 ? (
               <div>
                 <h3 className="text-lg font-bold text-red-800 mb-4">
-                  Issues ({analysisResults.errors.length}):
+                  Issues ({analysisResults.error_count || analysisResults.errors.length}):
                 </h3>
                 <div className="space-y-3">
-                  {analysisResults.errors.map((error: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className="bg-red-50 border-l-4 border-red-400 p-4 rounded"
-                    >
-                      <p className="font-semibold text-red-900 capitalize">
-                        {error.type}
-                      </p>
-                      <p className="text-sm text-red-800 mt-2">
-                        <span className="font-medium">Expected:</span>{" "}
-                        {error.expected}
-                      </p>
-                      <p className="text-sm text-red-800">
-                        <span className="font-medium">You said:</span>{" "}
-                        {error.actual}
-                      </p>
-                    </div>
-                  ))}
+                  {analysisResults.errors.map((error: any, idx: number) => {
+                    const received = error.received || error.actual;
+                    const isLowConf = error.confidence_level === "low";
+                    return (
+                      <div
+                        key={idx}
+                        className={`${isLowConf ? "bg-amber-50 border-l-4 border-amber-400" : "bg-red-50 border-l-4 border-red-400"} p-4 rounded`}
+                      >
+                        <p className="font-semibold capitalize">
+                          {error.type}
+                          {isLowConf && (
+                            <span className="ml-2 text-xs font-normal text-amber-600">
+                              (low confidence — may be hearing error)
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-sm mt-2">
+                          <span className="font-medium">Expected:</span>{" "}
+                          <span dir="rtl">{error.expected}</span>
+                        </p>
+                        <p className="text-sm">
+                          <span className="font-medium">You said:</span>{" "}
+                          <span dir="rtl">{received}</span>
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
               <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-8 text-center">
                 <p className="text-4xl mb-3">✅</p>
                 <p className="text-xl font-semibold text-emerald-900">
-                  Perfect Recitation!
+                  Masha'Allah! Perfect Recitation!
                 </p>
                 <p className="text-emerald-700 mt-2">No errors found</p>
+              </div>
+            )}
+
+            {/* Corrections */}
+            {analysisResults?.corrections && analysisResults.corrections.length > 0 && (
+              <div>
+                <h3 className="text-lg font-bold text-amber-800 mb-3">Suggestions</h3>
+                <ul className="space-y-2">
+                  {analysisResults.corrections.map((c: string, idx: number) => (
+                    <li key={idx} className="flex gap-2 text-sm text-gray-700">
+                      <span className="text-emerald-500">•</span>
+                      {c}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 

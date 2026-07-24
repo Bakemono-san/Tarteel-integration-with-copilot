@@ -147,6 +147,7 @@ class TarteelModel:
                     "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
                     "confidence": 0.95,
                     "phonemes": [],
+                    "token_confidences": None,
                     "model": "mock"
                 }
 
@@ -173,6 +174,7 @@ class TarteelModel:
                     "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
                     "confidence": 0.0,
                     "phonemes": [],
+                    "token_confidences": None,
                     "model": self.model_type
                 }
 
@@ -187,6 +189,7 @@ class TarteelModel:
                 "text": "",
                 "confidence": 0.0,
                 "phonemes": [],
+                "token_confidences": None,
                 "error": str(e),
                 "model": self.model_type if hasattr(self, 'model_type') else "unknown"
             }
@@ -268,34 +271,37 @@ class TarteelModel:
 
         return {
             "text": transcription,
-            "confidence": 0.9,  # Whisper doesn't provide confidence scores easily
-            "phonemes": []
+            "confidence": 0.9,
+            "phonemes": [],
+            "token_confidences": None
         }
 
     def _transcribe_wav2vec2(self, audio_array: np.ndarray, sample_rate: int) -> Dict:
-        """Transcribe using Wav2Vec2 model"""
+        """Transcribe using Wav2Vec2 model with per-token confidence"""
         input_values = self.processor(
             audio_array,
             sampling_rate=sample_rate,
             return_tensors="pt"
         ).input_values.to(self.device)
 
-        # Get logits
         with torch.no_grad():
             logits = self.model(input_values).logits
 
-        # Decode
         predicted_ids = torch.argmax(logits, dim=-1)
         transcription = self.processor.batch_decode(predicted_ids)[0]
 
-        # Calculate average confidence from logits
         probs = torch.softmax(logits, dim=-1)
         confidence = probs.max(dim=-1)[0].mean().item()
+
+        # Per-token confidence
+        token_probs = probs.max(dim=-1)[0]
+        token_confidences = token_probs[0].tolist()
 
         return {
             "text": transcription,
             "confidence": confidence,
-            "phonemes": []
+            "phonemes": [],
+            "token_confidences": token_confidences
         }
 
     def _transcribe_whisper_pipeline(self, audio_array: np.ndarray, sample_rate: int) -> Dict:
@@ -308,7 +314,8 @@ class TarteelModel:
         return {
             "text": result["text"],
             "confidence": 0.9,
-            "phonemes": []
+            "phonemes": [],
+            "token_confidences": None
         }
 
     def _transcribe_whisper_native(self, audio_array: np.ndarray, sample_rate: int) -> Dict:
@@ -331,8 +338,9 @@ class TarteelModel:
 
             return {
                 "text": result["text"].strip(),
-                "confidence": 0.9,  # Whisper doesn't provide per-token confidence easily
+                "confidence": 0.9,
                 "phonemes": [],
+                "token_confidences": None,
                 "segments": result.get("segments", [])
             }
         except Exception as e:
@@ -341,11 +349,13 @@ class TarteelModel:
                 "text": "",
                 "confidence": 0.0,
                 "phonemes": [],
+                "token_confidences": None,
                 "error": str(e)
             }
 
         return {
             "text": result["text"],
             "confidence": 0.9,
-            "phonemes": []
+            "phonemes": [],
+            "token_confidences": None
         }
