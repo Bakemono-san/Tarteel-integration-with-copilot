@@ -194,58 +194,74 @@ class TarteelModel:
             }
 
     def _load_audio_from_bytes(self, audio_bytes: bytes):
-        """Load audio from bytes - handles WebM, OGG, WAV formats"""
+        """Load audio from bytes - handles WAV and raw PCM"""
+        audio_array = None
+        sample_rate = 16000
+
+        # Method 1: soundfile (WAV, FLAC, OGG)
         try:
-            # First, try with soundfile (for WAV files)
             audio_io = io.BytesIO(audio_bytes)
             audio_array, sample_rate = sf.read(audio_io)
-        except Exception as e:
-            print(f"⚠️  Soundfile failed: {e}")
-            print("  → Trying pydub for WebM/OGG format...")
+        except Exception:
+            pass
 
+        # Method 2: raw WAV via manual header parsing
+        if audio_array is None and audio_bytes[:4] == b'RIFF':
             try:
-                # Try with pydub for WebM/OGG formats from MediaRecorder
-                from pydub import AudioSegment
+                import struct
+                # Parse WAV header manually
+                riff_size = struct.unpack('<I', audio_bytes[4:8])[0]
+                fmt_type = audio_bytes[8:12]
+                if fmt_type == b'WAVE':
+                    # Find fmt chunk
+                    pos = 12
+                    while pos < len(audio_bytes) - 8:
+                        chunk_id = audio_bytes[pos:pos+4]
+                        chunk_size = struct.unpack('<I', audio_bytes[pos+4:pos+8])[0]
+                        if chunk_id == b'fmt ':
+                            audio_format = struct.unpack('<H', audio_bytes[pos+8:pos+10])[0]
+                            num_channels = struct.unpack('<H', audio_bytes[pos+10:pos+12])[0]
+                            sample_rate = struct.unpack('<I', audio_bytes[pos+12:pos+16])[0]
+                            bits_per_sample = struct.unpack('<H', audio_bytes[pos+22:pos+24])[0]
+                        elif chunk_id == b'data':
+                            data = audio_bytes[pos+8:pos+8+chunk_size]
+                            if bits_per_sample == 16:
+                                audio_array = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
+                            elif bits_per_sample == 8:
+                                audio_array = np.frombuffer(data, dtype=np.uint8).astype(np.float32) / 255.0 * 2 - 1
+                            if num_channels == 2:
+                                audio_array = audio_array.reshape(-1, 2).mean(axis=1)
+                            break
+                        pos += 8 + chunk_size
+            except Exception:
+                pass
 
-                audio_io = io.BytesIO(audio_bytes)
+        # Method 3: try raw PCM (16-bit, mono, 16kHz)
+        if audio_array is None:
+            try:
+                raw = np.frombuffer(audio_bytes, dtype=np.int16)
+                if len(raw) > 100:
+                    audio_array = raw.astype(np.float32) / 32768.0
+            except Exception:
+                pass
 
-                # Try to detect format from bytes or assume WebM
-                try:
-                    audio = AudioSegment.from_file(audio_io, format="webm")
-                except Exception:
-                    try:
-                        audio_io.seek(0)
-                        audio = AudioSegment.from_file(audio_io, format="ogg")
-                    except Exception:
-                        audio_io.seek(0)
-                        audio = AudioSegment.from_file(audio_io, format="wav")
+        # Method 4: try raw float32
+        if audio_array is None:
+            try:
+                raw = np.frombuffer(audio_bytes, dtype=np.float32)
+                if len(raw) > 100:
+                    audio_array = raw
+            except Exception:
+                pass
 
-                # Convert to numpy array
-                samples = np.array(audio.get_array_of_samples())
+        # Last resort: return silence
+        if audio_array is None:
+            print("⚠️  Could not decode audio, returning silence")
+            audio_array = np.zeros(16000, dtype=np.float32)
 
-                # Handle stereo/mono
-                if audio.channels == 2:
-                    samples = samples.reshape((-1, 2))
-                    samples = samples.mean(axis=1)
-
-                audio_array = samples.astype(np.float32) / 32768.0
-                sample_rate = audio.frame_rate
-
-                print(f"  ✅ Successfully loaded {len(audio_array)} samples at {sample_rate}Hz")
-
-            except Exception as e2:
-                print(f"❌ Pydub also failed: {e2}")
-                raise
-
-        # Ensure float32
         if audio_array.dtype != np.float32:
             audio_array = audio_array.astype(np.float32)
 
-        # Normalize if needed
-        if audio_array.max() > 1.0:
-            audio_array = audio_array / 32768.0
-
-        # Convert to mono if stereo
         if len(audio_array.shape) > 1:
             audio_array = audio_array.mean(axis=1)
 

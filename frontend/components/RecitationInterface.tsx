@@ -6,7 +6,7 @@ import AyahDisplay from "./AyahDisplay";
 import FeedbackPanel from "./FeedbackPanel";
 import AudioVisualizer from "./AudioVisualizer";
 import { useRecitationWebSocket } from "@/lib/useRecitationWebSocket";
-import { apiFetch } from "@/lib/utils";
+import { apiFetch, blobToWavBase64 } from "@/lib/utils";
 
 interface Props {
   surahNumber: number;
@@ -100,14 +100,10 @@ export default function RecitationInterface({
       mediaRecorderRef.current = mr;
 
       // Send each chunk as it arrives (streaming)
-      mr.ondataavailable = (e) => {
+      mr.ondataavailable = async (e) => {
         if (e.data.size > 0) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const b64 = reader.result?.toString().split(",")[1] || "";
-            sendAudioData(b64, surahNumber, ayahNumber);
-          };
-          reader.readAsDataURL(e.data);
+          const b64 = await blobToWavBase64(e.data);
+          sendAudioData(b64, surahNumber, ayahNumber);
         }
       };
 

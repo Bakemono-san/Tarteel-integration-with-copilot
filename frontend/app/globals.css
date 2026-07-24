@@ -5,12 +5,8 @@
 /* ── Premium Quranic Fonts ────────────────────────── */
 @import url("https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Scheherazade+New:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@400;500;600;700&family=Lateef:wght@200;300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap");
 
-@font-face {
-  font-family: "Uthmani";
-  src: url("https://fonts.qurancomplex.gov.sa/fonts/UthmanicHafs_v18.woff2") format("woff2"),
-       url("https://cdn.alquran.cloud/public/fonts/uthmanic/v1/me_quran_uthmanic_v1.woff2") format("woff2");
-  font-display: swap;
-}
+/* Amiri Quran and Scheherazade New from Google Fonts are excellent Quranic fonts.
+   No external Uthmani font needed — they load instantly with no CORS issues. */
 
 /* ── Design Tokens ───────────────────────────────── */
 :root {
@@ -30,7 +26,7 @@
 
 /* ── Arabic Typography ───────────────────────────── */
 .arabic-text {
-  font-family: "Uthmani", "Amiri Quran", "Scheherazade New", "Noto Naskh Arabic", serif;
+  font-family: "Amiri Quran", "Scheherazade New", "Noto Naskh Arabic", serif;
   font-size: 1.75rem;
   line-height: 2.8;
   direction: rtl;
@@ -42,7 +38,7 @@
 }
 
 .quran-page {
-  font-family: "Scheherazade New", "Amiri Quran", "Uthmani", "Noto Naskh Arabic", serif;
+  font-family: "Scheherazade New", "Amiri Quran", "Noto Naskh Arabic", serif;
   font-size: 1.75rem;
   line-height: 2.6;
   text-align: justify;
